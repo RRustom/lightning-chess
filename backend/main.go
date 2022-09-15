@@ -5,7 +5,9 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/RRustom/lightning-chess/pkg/controllers"
 	"github.com/RRustom/lightning-chess/pkg/websocket"
+	"github.com/gin-gonic/gin"
 )
 
 // define websocket endpoint
@@ -41,6 +43,14 @@ func setupRoutes() {
 }
 
 func main() {
-	setupRoutes()
-	http.ListenAndServe(":8080", nil)
+	// setupRoutes()
+	// http.ListenAndServe(":8080", nil)
+
+	router := gin.Default()
+	router.GET("/game/:uuid", controllers.GetGameByUuid)
+	router.PUT("/game/join/:uuid/:blackId", controllers.PutJoinGame)
+	router.PUT("/game/move/:uuid/:playerId/:move", controllers.PutJoinGame)
+	router.POST("/game", controllers.PostNewGame)
+
+	router.Run("localhost:8080")
 }
