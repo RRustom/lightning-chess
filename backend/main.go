@@ -44,13 +44,22 @@ func setupRoutes() {
 
 func main() {
 	// setupRoutes()
-	// http.ListenAndServe(":8080", nil)
+	// http.ListenAndServe(":8000", nil)
 
 	router := gin.Default()
-	router.GET("/game/:uuid", controllers.GetGameByUuid)
-	router.PUT("/game/join/:uuid/:blackId", controllers.PutJoinGame)
-	router.PUT("/game/move/:uuid/:playerId/:move", controllers.PutJoinGame)
-	router.POST("/game", controllers.PostNewGame)
+
+	// router.Use(sessions.Sessions("session", cookie.NewStore(globals.Secret)))
+
+	// private := router.Group("/")
+	// private.Use(middleware.AuthRequired)
+	// routes.PrivateRoutes(private)
+
+	router.GET("/api/game/moves/:uuid", controllers.GetValidMoves)
+	router.GET("/api/game/:uuid", controllers.GetGameByUuid)
+	router.PUT("/api/game/join/:uuid/:blackId", controllers.PutJoinGame)
+	router.PUT("/api/game/move/:uuid/:playerId/:move", controllers.PutMove)
+	router.POST("/api/game", controllers.PostNewGame)
+	router.POST("/api/user/signup", controllers.PostNewUser)
 
 	router.Run("localhost:8080")
 }

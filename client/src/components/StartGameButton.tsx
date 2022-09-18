@@ -1,12 +1,24 @@
-import * as React from 'react';
-import { Link } from "react-router-dom";
-
-const GAME_UUID = "ef6a9765-a9a9-4b6a-8716-447bc4474d65"
+import {useState} from 'react';
+import { useNavigate } from "react-router-dom";
+import useAuth from '../context/auth'
+import GameAPI from '../api/game';
 
 const StartGameButton = () => {
+  const {userId} = useAuth();
+  const navigate = useNavigate();
+
+  const createNewGame = async () => {
+    try {
+      const response = await GameAPI.newGame(userId)
+      if (response.data) navigate(`/${response.data}`);
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
   return (
-    <button>
-        <Link to={GAME_UUID}>Start Game</Link>
+    <button onClick={() => createNewGame()}>
+        Start Game
     </button>
   );
 }

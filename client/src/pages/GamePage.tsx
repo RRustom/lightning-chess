@@ -4,6 +4,7 @@ import ChessBoard from '../components/ChessBoard';
 import InviteButton from '../components/InviteButton';
 import { connect, sendMsg } from "../api/websocket";
 import useAuth from '../context/auth'
+import GameAPI from '../api/game';
 
 interface ChatHistoryProps{
   chatHistory: Array<MessageEvent>
@@ -41,7 +42,7 @@ function GamePage() {
     <div className="App">
       <div>Welcome, {userName}!</div>
       <InviteButton />
-      <ChessBoard/>
+      <ChessBoard />
       <ChatHistory chatHistory={chatHistory} />
       <button onClick={send}>Hit</button>
     </div>

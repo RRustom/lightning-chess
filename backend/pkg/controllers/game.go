@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -29,6 +30,10 @@ type NewGameData struct {
 type GamePositionData struct {
 	Fen     string `json:"fen"`
 	Outcome string `json:"outcome"`
+}
+
+type ValidMovesData struct {
+	Moves string `json:"moves"`
 }
 
 func (g *Game) getGameFromPGN() *chess.Game {
@@ -111,6 +116,25 @@ func GetGameByUuid(c *gin.Context) {
 	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "game not found"})
 }
 
+func GetValidMoves(c *gin.Context) {
+	uuidString := c.Param("uuid")
+	uuid, _ := uuid.Parse(uuidString)
+
+	g, exists := games[uuid]
+
+	if !exists {
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "game not found"})
+		return
+	}
+
+	game := g.getGameFromPGN()
+	validMoves := game.ValidMoves()
+	fmt.Println(validMoves)
+	moves, _ := json.Marshal(validMoves)
+	c.IndentedJSON(http.StatusOK, ValidMovesData{Moves: string(moves)})
+	return
+}
+
 // PUT join a game (gameUuid, blackId) -> return FEN + outcome (if any)
 //
 //	-> then broadcast the FEN + the other's players valid moves + outcome (if any)
@@ -173,7 +197,7 @@ func PutMove(c *gin.Context) {
 		fmt.Println(err)
 	}
 
-	// TODO: broadcast to both listeners the new position data
+	// TODO: broadcast to both listeners the new position data, and the next set of possible moves?
 	// c.Status(http.StatusNoContent)
 
 	positionData := g.getGamePositionData()
