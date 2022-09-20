@@ -4,7 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
+
+	// "strconv"
 	"strings"
 	"time"
 
@@ -26,6 +27,17 @@ type NewGameData struct {
 	WhiteId int `json:"whiteId"`
 }
 
+type JoinGameData struct {
+	Uuid    string `json:"uuid"`
+	BlackId int    `json:"blackId"`
+}
+
+type MoveData struct {
+	Uuid     string `json:"uuid"`
+	PlayerId int    `json:"playerId"`
+	Move     string `json:"move"`
+}
+
 type GamePositionData struct {
 	Fen     string `json:"fen"`
 	Outcome string `json:"outcome"`
@@ -35,13 +47,15 @@ type ValidMovesData struct {
 	Moves []string `json:"moves"`
 }
 
+const STARTING_POSITION = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+
 func (g *Game) getGameFromPGN() *chess.Game {
 	pgnReader := strings.NewReader(g.Pgn)
 	pgn, err := chess.PGN(pgnReader)
 	if err != nil {
 		fmt.Println(err)
 	}
-	return chess.NewGame(pgn) // chess.UseNotation(chess.AlgebraicNotation{}) chess.UseNotation(chess.UCINotation{})
+	return chess.NewGame(chess.UseNotation(chess.UCINotation{}), pgn) // chess.UseNotation(chess.AlgebraicNotation{}) chess.UseNotation(chess.UCINotation{})
 }
 
 func (g *Game) getGamePositionData() GamePositionData {
@@ -55,9 +69,14 @@ func (g *Game) isPlayerIdTurn(playerId int) (bool, error) {
 	moves := game.Moves()
 	turns := len(moves)
 
-	if playerId == g.BlackId {
+	// fmt.Printf("%+v\n", *g)
+	// fmt.Println("turns: ", turns)
+	// fmt.Println("moves: ", moves)
+	// fmt.Println("BlackId: ", g.BlackId)
+
+	if playerId == g.WhiteId {
 		return turns%2 == 0, nil
-	} else if playerId == g.WhiteId {
+	} else if playerId == g.BlackId {
 		return turns%2 == 1, nil
 	}
 
@@ -83,12 +102,14 @@ func PostNewGame(c *gin.Context) {
 		return
 	}
 
+	g := chess.NewGame()
+
 	newGame := Game{
 		Uuid:      uuid.New(),
 		WhiteId:   data.WhiteId,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
-		Pgn:       "",
+		Pgn:       fmt.Sprint(g),
 	}
 	games[newGame.Uuid] = newGame
 
@@ -143,14 +164,19 @@ func GetValidMoves(c *gin.Context) {
 // PUT join a game (gameUuid, blackId) -> return FEN + outcome (if any)
 //
 //	-> then broadcast the FEN + the other's players valid moves + outcome (if any)
-func PutJoinGame(c *gin.Context) {
-	uuidString := c.Param("uuid")
-	blackId, _ := strconv.Atoi(c.Param("blackId"))
-	uuid, _ := uuid.Parse(uuidString)
+func PostJoinGame(c *gin.Context) {
+	var data JoinGameData
+
+	if err := c.BindJSON(&data); err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	uuid, _ := uuid.Parse(data.Uuid)
 
 	g, exists := games[uuid]
 	if exists {
-		g.BlackId = blackId
+		g.BlackId = data.BlackId
 		games[uuid] = g
 
 		positionData := g.getGamePositionData()
@@ -164,11 +190,19 @@ func PutJoinGame(c *gin.Context) {
 // PUT make a move (game uuid, playerID, move (in algebraic notation)) -> return FEN + outcome (if any)
 //
 //	-> then broadcast the FEN + the other's players valid moves + outcome (if any)
-func PutMove(c *gin.Context) {
-	uuidString := c.Param("uuid")
-	uuid, _ := uuid.Parse(uuidString)
-	playerId, _ := strconv.Atoi(c.Param("playerId"))
-	move := c.Param("move")
+func PostMove(c *gin.Context) {
+	var data MoveData
+
+	if err := c.BindJSON(&data); err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	uuid, _ := uuid.Parse(data.Uuid)
+	// playerId, _ := strconv.Atoi(c.Param("playerId"))
+	// move := c.Param("move")
+
+	fmt.Printf("player %d wants to move %s \n", data.PlayerId, data.Move)
 
 	g, exists := games[uuid]
 	if !exists {
@@ -176,13 +210,13 @@ func PutMove(c *gin.Context) {
 		return
 	}
 
-	_, userExists := Users[playerId]
+	_, userExists := Users[data.PlayerId]
 	if !userExists {
 		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "user not found"})
 		return
 	}
 
-	isCorrectPlayer, err := g.isPlayerIdTurn(playerId)
+	isCorrectPlayer, err := g.isPlayerIdTurn(data.PlayerId)
 	if !isCorrectPlayer || err != nil {
 		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "not your turn!"})
 		return
@@ -190,17 +224,25 @@ func PutMove(c *gin.Context) {
 
 	game := g.getGameFromPGN()
 
+	fmt.Println("game outcome: ", game.Outcome())
+	fmt.Println("no outcome: ", chess.NoOutcome)
+	fmt.Println(game.String())
+
 	// check if game did not already reach an outcome
 	if game.Outcome() != chess.NoOutcome {
 		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "game is no longer active"})
 		return
 	}
 
-	// make move using algebraic notation
-	if err := game.MoveStr(move); err != nil {
+	// make move using UCI notation
+	if err := game.MoveStr(data.Move); err != nil {
 		// handle error
 		fmt.Println(err)
 	}
+	g.Pgn = fmt.Sprint(game)
+	games[uuid] = g
+
+	fmt.Println("game after move: ", game)
 
 	// TODO: broadcast to both listeners the new position data, and the next set of possible moves?
 	// c.Status(http.StatusNoContent)

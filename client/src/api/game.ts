@@ -10,15 +10,15 @@ class GameAPI {
   }
 
   static async joinGame(uuid: string, blackId: number) {
-    return axios.put(`/api/game/join/${uuid}/${blackId}`);
+    return axios.post(`/api/game/join`, {uuid, blackId});
   }
 
   static async move(uuid: string, playerId: number, move: string) {
-    return axios.put(`/api/game/move/${uuid}/${playerId}/${move}`);
+    return axios.post(`/api/game/move`, {uuid, playerId, move});
   }
 
   static async newGame(whiteId: number) {
-    return axios.post(`/api/game`, { whiteId });
+    return axios.post(`/api/game/new`, { whiteId });
   }
 }
 

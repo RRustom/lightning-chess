@@ -56,9 +56,9 @@ func main() {
 
 	router.GET("/api/game/moves/:uuid", controllers.GetValidMoves)
 	router.GET("/api/game/:uuid", controllers.GetGameByUuid)
-	router.PUT("/api/game/join/:uuid/:blackId", controllers.PutJoinGame)
-	router.PUT("/api/game/move/:uuid/:playerId/:move", controllers.PutMove)
-	router.POST("/api/game", controllers.PostNewGame)
+	router.POST("/api/game/join", controllers.PostJoinGame)
+	router.POST("/api/game/move", controllers.PostMove)
+	router.POST("/api/game/new", controllers.PostNewGame)
 	router.POST("/api/user/signup", controllers.PostNewUser)
 
 	router.Run("localhost:8080")
