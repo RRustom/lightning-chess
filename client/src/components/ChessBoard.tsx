@@ -8,17 +8,28 @@ import {useParams} from "react-router-dom";
 
 const STARTING_POSITION = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
+export interface Move {
+    from: string,
+    to: string,
+    uci: string
+}
+
 export default function ChessBoard() {
     const {userId} = useAuth();
     const chessboardRef = useRef();
     const [currentFEN, setCurrentFEN] = useState<string|undefined>(undefined)
     const [outcome, setOutcome] = useState<string|null>(null);
-    const [validMoves, setValidMoves] = useState<string[]>([]);
+    const [validMoves, setValidMoves] = useState<Move[]>([]);
     const { uuid: gameUuid } = useParams();
+
+    const [moveFrom, setMoveFrom] = useState('');
+    const [rightClickedSquares, setRightClickedSquares] = useState({});
+    const [moveSquares, setMoveSquares] = useState({});
+    const [optionSquares, setOptionSquares] = useState({});
 
     useEffect(() => {
         // TODO: initialize the game
-        getValidMoves()
+        getValidMoves(gameUuid, userId, setValidMoves)
     }, [])
 
     // const makeAMove(move: any) {
@@ -27,6 +38,129 @@ export default function ChessBoard() {
     //     setGame(gameCopy);
     //     return result; // null if the move was illegal, the move object if the move was legal
     // }
+
+    function getMoveOptions(square: string) {
+        // const moves = game.moves({
+        //     square,
+        //     verbose: true
+        // });
+        if (validMoves.length === 0) {
+            return;
+        }
+
+        console.log('Computing move options for: ', square)
+        console.log('Valid moves: ', validMoves)
+
+        const validMovesForSquare = validMoves.filter(x => x.from === square);
+
+
+        const newSquares = {} as any;
+
+        for (const m of validMoves) {
+            newSquares[m.to] = {background: 'none'}
+        }
+
+        for (const m of validMovesForSquare) {
+            newSquares[m.to] = {background: 'radial-gradient(circle, rgba(0,0,0,.1) 25%, transparent 25%)', borderRadius: '50%'}
+        }
+
+
+        
+        
+        // validMoves.filter(x => x.from === square)
+
+        
+        // validMoves.map((move) => {
+
+
+
+        //     console.log(`is ${square} === ${move.from}: `, square === move.from)
+        //     newSquares[move.to] = {
+        //     background: square === move.from ? 'radial-gradient(circle, rgba(0,0,0,.1) 25%, transparent 25%)' : 'none',
+            
+        //     // 'radial-gradient(12px at center, rgba(0,0,0,.1) 85%, transparent 85%)',
+        //     //     // game.get(move.to) && game.get(move.to).color !== game.get(square).color
+        //     //     // ? 'radial-gradient(circle, rgba(0,0,0,.1) 85%, transparent 85%)'
+        //     //     // : 'radial-gradient(circle, rgba(0,0,0,.1) 25%, transparent 25%)',
+        //     borderRadius: '50%'
+        //     }
+        //     return move;
+        // });
+        newSquares[square] = {
+            background: 'rgba(255, 255, 0, 0.4)'
+        }
+        console.log('NEW SQUARES: ', newSquares)
+        setOptionSquares(newSquares);
+    }
+
+    async function onSquareClick(square: string) {
+        setRightClickedSquares({});
+
+        console.log('SQUARE: ', square)
+        console.log('moveFrom: ', moveFrom)
+    
+        function resetFirstMove(square: string) {
+          setMoveFrom(square);
+          getMoveOptions(square);
+        }
+
+        console.log('OPTION SQUARES: ', optionSquares)
+    
+        // if square was NOT an option, then reset options
+        const move = moveToUCI(moveFrom, square)
+        console.log('move: ', move)
+        console.log('is valid move: ', isValidMove(move, validMoves))
+
+        if (!isValidMove(move, validMoves)) {
+            resetFirstMove(square);
+        } else {
+            // is square was a valid move, then play it
+            await makeMove(gameUuid, userId, move, setCurrentFEN)
+            setMoveFrom('');
+            setOptionSquares({});
+        }
+
+
+        // if (!moveFrom) {
+        //   resetFirstMove(square);
+        //   return;
+        // }
+
+        // is square was a valid move, then play it
+        // if (isValidMove(move, validMoves)) {
+        //     await makeMove(gameUuid, userId, move, setCurrentFEN)
+        //     setMoveFrom('');
+        //     setOptionSquares({});
+        // } 
+        
+        // else {
+        //     // resetFirstMove(square);
+        //     setMoveFrom('');
+        //     setOptionSquares({});
+        //     return;
+        // }
+
+        
+        // if invalid, setMoveFrom and getMoveOptions
+        // if (move === null) {
+        //   resetFirstMove(square);
+        //   return;
+        // }
+    
+        //setTimeout(makeRandomMove, 300);
+        
+      }
+    
+    //   function onSquareRightClick(square) {
+    //     const colour = 'rgba(0, 0, 255, 0.4)';
+    //     setRightClickedSquares({
+    //       ...rightClickedSquares,
+    //       [square]:
+    //         rightClickedSquares[square] && rightClickedSquares[square].backgroundColor === colour
+    //           ? undefined
+    //           : { backgroundColor: colour }
+    //     });
+    //   }    
 
     function onDrop(sourceSquare: string, targetSquare: string) {
         // const move = makeAMove({
@@ -44,28 +178,14 @@ export default function ChessBoard() {
         return true;
     }
 
-    const getValidMoves = async () => {
-        try {
-            if (!gameUuid) return;
-            const response = await GameAPI.getValidMoves(gameUuid);
-            console.log('VALID MOVES: ', response.data.moves)
-            setValidMoves(response.data.moves)
-        } catch(err) {
-            console.log(err)
-        }
-    }
+    // onSquareRightClick={onSquareRightClick}
 
-    const postMove = async (move: string) => {
-        try {
-            if (!gameUuid) return;
-            const response = await GameAPI.move(gameUuid, userId, move);
-            setCurrentFEN(response.data.fen)
-        } catch(err) {
-            console.log(err)
-        }
-    }
-
-    // ref={chessboardRef}
+    const customSquareStyles = {
+                    ...moveSquares,
+                    ...optionSquares,
+                    //...rightClickedSquares
+                }
+    console.log('CUSTOM SQUARE STYLES: ', customSquareStyles)
 
     return (
         <div>
@@ -78,6 +198,10 @@ export default function ChessBoard() {
                     borderRadius: '4px',
                     boxShadow: '0 5px 15px rgba(0, 0, 0, 0.5)'
                 }}
+
+                onSquareClick={onSquareClick}
+                
+                customSquareStyles={customSquareStyles}
                 
             />
             {/* <button
@@ -104,6 +228,41 @@ export default function ChessBoard() {
             </button> */}
         </div>
     )
+}
+
+const isValidMove = (uci: string, validMoves: Move[]): boolean => {
+    return validMoves.filter(x => x.uci === uci).length === 1
+}
+
+const moveToUCI = (from: string, to: string): string => {
+    return from + to
+}
+
+const formatMove = (uci: string): Move => {
+    return {from: uci.substring(0, 2), to: uci.substring(2, 4), uci}
+}
+
+const getValidMoves = async (gameUuid: string|undefined, playerId: number, setValidMoves: (x: any) => void) => {
+    try {
+        if (!gameUuid) return;
+        const response = await GameAPI.getValidMoves(gameUuid);
+        console.log('VALID MOVES: ', response.data.moves)
+        setValidMoves(response.data.moves.map((x: string) => formatMove(x)))
+    } catch(err) {
+        console.log(err)
+    }
+}
+
+const makeMove = async (gameUuid: string|undefined, playerId: number, move: string, setCurrentFen: (x: any) => void) => {
+    try {
+        if (!gameUuid) return;
+        const response = await GameAPI.move(gameUuid, playerId, move);
+        console.log('UPDATED FEN: ', response.data.fen)
+        setCurrentFen(response.data.fen)
+        // setValidMoves(response.data.moves.map((x: string) => parseUCI(x)))
+    } catch(err) {
+        console.log(err)
+    }
 }
 
 // export default function PlayVsPlay({ boardWidth }: ChessBoardProps): JSX.Element {

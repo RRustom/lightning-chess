@@ -1,11 +1,9 @@
-import React from 'react'
+import React from 'react';
 
-type Props = {}
+type Props = {};
 
 const OnlineBadge = (props: Props) => {
-  return (
-    <div>OnlineBadge</div>
-  )
-}
+  return <div>OnlineBadge</div>;
+};
 
-export default OnlineBadge
+export default OnlineBadge;

@@ -1,5 +1,5 @@
-import React, {useState, useEffect} from 'react';
-import { Routes, Route, Outlet, Link, RouteProps } from "react-router-dom";
+import React, { useState, useEffect } from 'react';
+import { Routes, Route, Outlet, Link, RouteProps } from 'react-router-dom';
 import GamePage from './pages/GamePage';
 import LandingPage from './pages/LandingPage';
 import ErrorPage from './pages/ErrorPage';
@@ -8,11 +8,10 @@ import ErrorPage from './pages/ErrorPage';
 enum PageState {
   UNKNOWN,
   LOADING,
-  GAME
+  GAME,
 }
 
 export default function App() {
-
   return (
     <div>
       {/* Routes nest inside one another. Nested route paths build upon
@@ -21,10 +20,10 @@ export default function App() {
       <Routes>
         <Route path={`/:uuid`} element={<GamePage />} />
 
-{/* Using path="*"" means "match anything", so this route
+        {/* Using path="*"" means "match anything", so this route
       acts like a catch-all for URLs that we don't have explicit
       routes for. */}
-        
+
         <Route path="/" element={<LandingPage />} />
         {/* <Route path="*" element={<ErrorPage />} /> */}
       </Routes>
@@ -75,4 +74,5 @@ export default function App() {
 //   }
 // };
 
-const UUID_PATTERN = '[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89aAbB][a-f0-9]{3}-[a-f0-9]{12}';
+const UUID_PATTERN =
+  '[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89aAbB][a-f0-9]{3}-[a-f0-9]{12}';

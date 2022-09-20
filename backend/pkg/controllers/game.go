@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -33,7 +32,7 @@ type GamePositionData struct {
 }
 
 type ValidMovesData struct {
-	Moves string `json:"moves"`
+	Moves []string `json:"moves"`
 }
 
 func (g *Game) getGameFromPGN() *chess.Game {
@@ -42,7 +41,7 @@ func (g *Game) getGameFromPGN() *chess.Game {
 	if err != nil {
 		fmt.Println(err)
 	}
-	return chess.NewGame(pgn) // chess.UseNotation(chess.AlgebraicNotation{})
+	return chess.NewGame(pgn) // chess.UseNotation(chess.AlgebraicNotation{}) chess.UseNotation(chess.UCINotation{})
 }
 
 func (g *Game) getGamePositionData() GamePositionData {
@@ -63,10 +62,6 @@ func (g *Game) isPlayerIdTurn(playerId int) (bool, error) {
 	}
 
 	return false, errors.New("player is not part of the game")
-}
-
-func Error(s string) {
-	panic("unimplemented")
 }
 
 // rudimentary storage
@@ -129,9 +124,19 @@ func GetValidMoves(c *gin.Context) {
 
 	game := g.getGameFromPGN()
 	validMoves := game.ValidMoves()
-	fmt.Println(validMoves)
-	moves, _ := json.Marshal(validMoves)
-	c.IndentedJSON(http.StatusOK, ValidMovesData{Moves: string(moves)})
+	fmt.Println("validMoves: ", validMoves)
+
+	var movesUCI []string
+
+	for _, validMove := range validMoves {
+		moveUCI := chess.UCINotation.Encode(chess.UCINotation{}, game.Position(), validMove)
+		movesUCI = append(movesUCI, moveUCI)
+	}
+
+	// moves, _ := json.Marshal(validMoves)
+	fmt.Println("moves: ", movesUCI)
+	fmt.Println("string move 0: ", validMoves[0].String())
+	c.IndentedJSON(http.StatusOK, ValidMovesData{Moves: movesUCI})
 	return
 }
 
