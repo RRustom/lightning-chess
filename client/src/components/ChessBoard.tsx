@@ -3,6 +3,7 @@ import { Chessboard } from 'react-chessboard';
 import GameAPI from '../api/game';
 import useAuth from '../context/auth'
 import {useParams} from "react-router-dom";
+import useMoves from '../hooks/useMoves'; 
 // import Chess from 'chess.js';
 // import Chessground from '@react-chess/chessground';
 
@@ -15,12 +16,14 @@ export interface Move {
 }
 
 export default function ChessBoard() {
-    const {userId} = useAuth();
+    const {userId, currentColor} = useAuth();
     const chessboardRef = useRef();
     const [currentFEN, setCurrentFEN] = useState<string|undefined>(undefined)
     const [outcome, setOutcome] = useState<string|null>(null);
     const [validMoves, setValidMoves] = useState<Move[]>([]);
     const { uuid: gameUuid } = useParams();
+
+    const {moves, sendMove, isMyTurn} = useMoves(gameUuid)
 
     const [moveFrom, setMoveFrom] = useState('');
     const [rightClickedSquares, setRightClickedSquares] = useState({});
@@ -28,16 +31,28 @@ export default function ChessBoard() {
     const [optionSquares, setOptionSquares] = useState({});
 
     useEffect(() => {
-        // TODO: initialize the game
-        getValidMoves(gameUuid, userId, setValidMoves)
-    }, [])
+        console.log('IS MY TURN: ', isMyTurn)
+        console.log('COLOR: ', currentColor)
+        if (isMyTurn) {
+            getValidMoves(gameUuid, userId, setValidMoves)
+        }
+    }, [isMyTurn])
 
-    // const makeAMove(move: any) {
-    //     const gameCopy = { ...game };
-    //     const result = gameCopy.move(move);
-    //     setGame(gameCopy);
-    //     return result; // null if the move was illegal, the move object if the move was legal
-    // }
+    
+    const makeMove = async (move: string) => {
+        try {
+            if (!gameUuid) return;
+            
+            sendMove(move)
+            // const response = await GameAPI.move(gameUuid, playerId, move);
+            // console.log('UPDATED FEN: ', response.data.fen)
+            // setCurrentFEN(response.data.fen)
+            // setValidMoves(response.data.moves.map((x: string) => parseUCI(x)))
+
+        } catch(err) {
+            console.log(err)
+        }
+    }
 
     function getMoveOptions(square: string) {
         // const moves = game.moves({
@@ -115,7 +130,7 @@ export default function ChessBoard() {
             resetFirstMove(square);
         } else {
             // is square was a valid move, then play it
-            await makeMove(gameUuid, userId, move, setCurrentFEN)
+            await makeMove(move)
             setMoveFrom('');
             setOptionSquares({});
         }
@@ -204,28 +219,6 @@ export default function ChessBoard() {
                 customSquareStyles={customSquareStyles}
                 
             />
-            {/* <button
-                className="rc-button"
-                onClick={() => {
-                safeGameMutate((game) => {
-                    game.reset();
-                });
-                chessboardRef.current.clearPremoves();
-                }}
-            >
-            reset
-            </button>
-            <button
-                className="rc-button"
-                onClick={() => {
-                safeGameMutate((game) => {
-                    game.undo();
-                });
-                chessboardRef.current.clearPremoves();
-                }}
-            >
-            undo
-            </button> */}
         </div>
     )
 }
@@ -252,78 +245,3 @@ const getValidMoves = async (gameUuid: string|undefined, playerId: number, setVa
         console.log(err)
     }
 }
-
-const makeMove = async (gameUuid: string|undefined, playerId: number, move: string, setCurrentFen: (x: any) => void) => {
-    try {
-        if (!gameUuid) return;
-        const response = await GameAPI.move(gameUuid, playerId, move);
-        console.log('UPDATED FEN: ', response.data.fen)
-        setCurrentFen(response.data.fen)
-        // setValidMoves(response.data.moves.map((x: string) => parseUCI(x)))
-    } catch(err) {
-        console.log(err)
-    }
-}
-
-// export default function PlayVsPlay({ boardWidth }: ChessBoardProps): JSX.Element {
-//   const chessboardRef = useRef();
-//   const [game, setGame] = useState(new Chess());
-
-//   function safeGameMutate(modify) {
-//     setGame((g) => {
-//       const update = { ...g };
-//       modify(update);
-//       return update;
-//     });
-//   }
-
-//   function onDrop(sourceSquare, targetSquare) {
-//     const gameCopy = { ...game };
-//     const move = gameCopy.move({
-//       from: sourceSquare,
-//       to: targetSquare,
-//       promotion: 'q' // always promote to a queen for example simplicity
-//     });
-//     setGame(gameCopy);
-//     return move;
-//   }
-
-//   return (
-//     <div>
-//       <Chessboard
-//         id="PlayVsPlay"
-//         animationDuration={200}
-//         boardWidth={boardWidth}
-//         position={game.fen()}
-//         onPieceDrop={onDrop}
-//         customBoardStyle={{
-//           borderRadius: '4px',
-//           boxShadow: '0 5px 15px rgba(0, 0, 0, 0.5)'
-//         }}
-//         ref={chessboardRef}
-//       />
-//       <button
-//         className="rc-button"
-//         onClick={() => {
-//           safeGameMutate((game) => {
-//             game.reset();
-//           });
-//           chessboardRef.current.clearPremoves();
-//         }}
-//       >
-//         reset
-//       </button>
-//       <button
-//         className="rc-button"
-//         onClick={() => {
-//           safeGameMutate((game) => {
-//             game.undo();
-//           });
-//           chessboardRef.current.clearPremoves();
-//         }}
-//       >
-//         undo
-//       </button>
-//     </div>
-//   );
-// }

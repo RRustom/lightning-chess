@@ -7,16 +7,25 @@ import {
 } from 'unique-names-generator';
 import UserAPI from '../api/user';
 
+export enum Color {
+  White = 'white',
+  Black = 'black'
+}
+
 export type AuthContextType = {
   userName: string | null;
   userId: number;
   signUp: () => void;
+  startGame: () => void;
+  currentColor: Color
 };
 
 const AuthContextDefaults = {
   userName: null,
   userId: 0,
   signUp: () => null,
+  startGame: () => null,
+  currentColor: Color.Black
 };
 
 export const AuthContext = createContext<AuthContextType>(AuthContextDefaults);
@@ -24,6 +33,7 @@ export const AuthContext = createContext<AuthContextType>(AuthContextDefaults);
 export const AuthProvider = ({ children }: any) => {
   const [userName, setUserName] = useState<string | null>(null);
   const [userId, setUserId] = useState<number>(0);
+  const [currentColor, setCurrentColor] = useState<Color>(Color.Black);
 
   const signUp = async () => {
     if (!userName) {
@@ -40,13 +50,19 @@ export const AuthProvider = ({ children }: any) => {
     return;
   };
 
+  const startGame = () => {
+    setCurrentColor(Color.White)
+  }
+
   const memoedValue = useMemo(
     () => ({
       userName,
       userId,
       signUp,
+      startGame,
+      currentColor
     }),
-    [userName, userId, signUp],
+    [userName, userId, signUp, startGame, currentColor],
   );
 
   return (
