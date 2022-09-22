@@ -83,6 +83,8 @@ func main() {
 	// router.POST("/api/game/join", controllers.PostJoinGame)
 	// router.POST("/api/game/move", controllers.PostMove)
 	router.POST("/api/game/new", controllers.PostNewGame)
+
+	router.GET("/api/user/:id", controllers.GetUserById)
 	router.POST("/api/user/signup", controllers.PostNewUser)
 
 	router.Run("localhost:8080")

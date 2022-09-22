@@ -5,19 +5,15 @@ import {
   colors,
   animals,
 } from 'unique-names-generator';
-import UserAPI from '../api/user';
-
-export enum Color {
-  White = 'white',
-  Black = 'black'
-}
+import AuthAPI from '../api/auth';
+import { Color } from '../global';
 
 export type AuthContextType = {
   userName: string | null;
   userId: number;
   signUp: () => void;
   startGame: () => void;
-  currentColor: Color
+  currentColor: Color;
 };
 
 const AuthContextDefaults = {
@@ -25,7 +21,7 @@ const AuthContextDefaults = {
   userId: 0,
   signUp: () => null,
   startGame: () => null,
-  currentColor: Color.Black
+  currentColor: Color.Black,
 };
 
 export const AuthContext = createContext<AuthContextType>(AuthContextDefaults);
@@ -41,7 +37,7 @@ export const AuthProvider = ({ children }: any) => {
       setUserName(newUsername);
 
       try {
-        const response = await UserAPI.signUp(newUsername);
+        const response = await AuthAPI.signUp(newUsername);
         setUserId(parseInt(response.data));
       } catch (err) {
         console.log('error while signing up');
@@ -51,8 +47,8 @@ export const AuthProvider = ({ children }: any) => {
   };
 
   const startGame = () => {
-    setCurrentColor(Color.White)
-  }
+    setCurrentColor(Color.White);
+  };
 
   const memoedValue = useMemo(
     () => ({
@@ -60,7 +56,7 @@ export const AuthProvider = ({ children }: any) => {
       userId,
       signUp,
       startGame,
-      currentColor
+      currentColor,
     }),
     [userName, userId, signUp, startGame, currentColor],
   );

@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -76,6 +77,8 @@ func (s Subscription) ReadPump() {
 			break
 		}
 
+		fmt.Printf("RECEIVED WS MESSAGE: %+v\n", message)
+
 		m := Message{Room: s.Room}
 		var outputData []byte
 		var err error
@@ -90,6 +93,7 @@ func (s Subscription) ReadPump() {
 
 		// _, msg, err := c.Ws.ReadMessage()
 		if err != nil {
+			log.Printf("error: %v\n", err)
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
 				log.Printf("error: %v", err)
 			}

@@ -28,4 +28,4 @@
 
 // export { connect, sendMsg };
 
-export const HELLO = 'hello'
+export const HELLO = 'hello';

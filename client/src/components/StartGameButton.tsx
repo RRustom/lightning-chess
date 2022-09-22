@@ -10,7 +10,7 @@ const StartGameButton = () => {
   const createNewGame = async () => {
     try {
       const response = await GameAPI.newGame(userId);
-      startGame()
+      startGame();
       if (response.data) navigate(`/${response.data}`);
     } catch (err) {
       console.log(err);

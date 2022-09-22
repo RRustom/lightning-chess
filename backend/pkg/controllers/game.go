@@ -1,11 +1,9 @@
 package controllers
 
 import (
-	"bytes"
-	"encoding/gob"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 
 	// "strconv"
@@ -22,13 +20,9 @@ type Game struct {
 	Pgn       string    `json:"pgn"`     // PGN format for the whole game, with metadata
 	WhiteId   int       `json:"whiteId"` // white player ID
 	BlackId   int       `json:"blackId"` // black player ID
+	Positions []string  `json:"moves"`
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
-}
-
-type GameLog struct {
-	Uuid      uuid.UUID `json:"uuid"`
-	Positions []string  `json:"moves"` // slice of FEN positions of the game
 }
 
 type NewGameData struct {
@@ -49,6 +43,7 @@ type MoveData struct {
 type GamePositionData struct {
 	Fen     string `json:"fen"`
 	Outcome string `json:"outcome"`
+	NumTurn int    `json:"numTurn"`
 }
 
 type ValidMovesData struct {
@@ -67,7 +62,9 @@ func (g *Game) getGameFromPGN() *chess.Game {
 func (g *Game) getGamePositionData() GamePositionData {
 	game := g.getGameFromPGN()
 	fen := game.Position().String()
-	return GamePositionData{Fen: fen, Outcome: game.Outcome().String()}
+	moves := game.Moves()
+	turns := len(moves)
+	return GamePositionData{Fen: fen, Outcome: game.Outcome().String(), NumTurn: turns}
 }
 
 func (g *Game) isPlayerIdTurn(playerId int) (bool, error) {
@@ -130,8 +127,7 @@ func GetGameByUuid(c *gin.Context) {
 	g, exists := games[uuid]
 
 	if exists {
-		positionData := g.getGamePositionData()
-		c.IndentedJSON(http.StatusOK, positionData)
+		c.IndentedJSON(http.StatusOK, g)
 		return
 	}
 
@@ -185,19 +181,25 @@ func JoinGame(data JoinGameData) ([]byte, error) {
 		g.BlackId = data.BlackId
 		games[uuid] = g
 
-		positionData := g.getGamePositionData()
-		// c.IndentedJSON(http.StatusOK, positionData)
-		var outputData bytes.Buffer        // Stand-in for a network connection
-		enc := gob.NewEncoder(&outputData) // Will write to network.
-		// dec := gob.NewDecoder(&network) // Will read from network.
-		// Encode (send) the value.
-		err := enc.Encode(positionData)
-		if err != nil {
-			log.Fatal("encode error:", err)
-		}
+		// positionData := g.getGamePositionData()
 
+		u, err := json.Marshal(JoinGameData{BlackId: data.BlackId})
+		if err != nil {
+			panic(err)
+		}
+		return u, nil
 		// c.IndentedJSON(http.StatusOK, positionData)
-		return outputData.Bytes(), nil
+		// var outputData bytes.Buffer        // Stand-in for a network connection
+		// enc := gob.NewEncoder(&outputData) // Will write to network.
+		// // dec := gob.NewDecoder(&network) // Will read from network.
+		// // Encode (send) the value.
+		// err := enc.Encode(positionData)
+		// if err != nil {
+		// 	log.Fatal("encode error:", err)
+		// }
+
+		// // c.IndentedJSON(http.StatusOK, positionData)
+		// return outputData.Bytes(), nil
 	}
 
 	return []byte{}, errors.New("game not found")
@@ -267,15 +269,20 @@ func MakeMove(data MoveData) ([]byte, error) {
 
 	positionData := g.getGamePositionData()
 
-	var outputData bytes.Buffer        // Stand-in for a network connection
-	enc := gob.NewEncoder(&outputData) // Will write to network.
-	// dec := gob.NewDecoder(&network) // Will read from network.
-	// Encode (send) the value.
-	err = enc.Encode(positionData)
+	u, err := json.Marshal(positionData)
 	if err != nil {
-		log.Fatal("encode error:", err)
+		panic(err)
 	}
 
+	// var outputData bytes.Buffer        // Stand-in for a network connection
+	// enc := gob.NewEncoder(&outputData) // Will write to network.
+	// // dec := gob.NewDecoder(&network) // Will read from network.
+	// // Encode (send) the value.
+	// err = enc.Encode(positionData)
+	// if err != nil {
+	// 	log.Fatal("encode error:", err)
+	// }
+
 	// c.IndentedJSON(http.StatusOK, positionData)
-	return outputData.Bytes(), nil
+	return u, nil
 }

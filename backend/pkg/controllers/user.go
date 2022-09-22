@@ -22,6 +22,21 @@ type NewUserData struct {
 
 var Users = make(map[int]User)
 
+// GET game by uuid -> return FEN + outcome
+func GetUserById(c *gin.Context) {
+	userId := c.Param("id")
+	id, _ := strconv.Atoi(userId)
+
+	user, exists := Users[id]
+
+	if exists {
+		c.IndentedJSON(http.StatusOK, user)
+		return
+	}
+
+	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "game not found"})
+}
+
 // POST create a new user
 func PostNewUser(c *gin.Context) {
 	var data NewUserData
