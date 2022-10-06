@@ -1,12 +1,8 @@
-import { useRef, useState, useEffect, RefObject } from 'react';
+import { useState, useEffect } from 'react';
 import { Chessboard } from 'react-chessboard';
-import GameAPI from '../api/game';
 import useAuth from '../context/auth';
-import { useParams } from 'react-router-dom';
 import { Color, Move, Outcome } from '../global';
 import useGame from '../context/game';
-// import Chess from 'chess.js';
-// import Chessground from '@react-chess/chessground';
 import useWindowSize from '../hooks/useWindowSize';
 import Confetti from 'react-confetti';
 

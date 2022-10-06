@@ -77,6 +77,7 @@ func main() {
 	// private := router.Group("/")
 	// private.Use(middleware.AuthRequired)
 	// routes.PrivateRoutes(private)
+	router.POST("/api/lnd/connect", controllers.ConnectToNode)
 
 	router.GET("/api/game/moves/:uuid", controllers.GetValidMoves)
 	router.GET("/api/game/:uuid", controllers.GetGameByUuid)

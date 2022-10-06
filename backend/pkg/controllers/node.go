@@ -1,0 +1,202 @@
+package controllers
+
+import (
+	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"fmt"
+	"log"
+	"net/http"
+	"strings"
+
+	"google.golang.org/grpc"
+
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/metadata"
+
+	"encoding/hex"
+
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"github.com/lightningnetwork/lnd/lnrpc"
+)
+
+// store: a mapping from token to gRPC connection
+
+// method: getRPC: token => gRPC connection
+
+// method: connect to LND node: host, cert, macaroon => token, pubkey
+
+// method: listen for payments
+
+type LNDNode struct {
+	Token    string
+	Host     string
+	Cert     string
+	Macaroon string
+}
+
+// LNDclient is an implementation of the wall.LNClient and pay.LNClient interface
+// for the lnd Lightning Network node implementation.
+type LNDClient struct {
+	lndClient lnrpc.LightningClient
+	ctx       context.Context
+	conn      *grpc.ClientConn
+}
+
+// LNDoptions are the options for the connection to the lnd node.
+type LNDOptions struct {
+	// Address of your LND node, including the port.
+	// Optional ("localhost:10009" by default).
+	Host string `json:"host"`
+	// Path to the "tls.cert" file that your LND node uses.
+	// Optional ("tls.cert" by default).
+	Cert string `json:"cert"`
+	// Path to the macaroon file that your LND node uses.
+	// "invoice.macaroon" if you only use the GenerateInvoice() and CheckInvoice() methods
+	// (required by the middleware in the package "wall").
+	// "admin.macaroon" if you use the Pay() method (required by the client in the package "pay").
+	// Optional ("invoice.macaroon" by default).
+	Macaroon string `json:"macaroon"`
+}
+
+// rudimentary storage
+var nodes = make(map[string]LNDNode)
+
+// DefaultLNDoptions provides default values for LNDoptions.
+var DefaultLNDoptions = LNDOptions{
+	Host:     "localhost:10009",
+	Cert:     "tls.cert",
+	Macaroon: "invoice.macaroon",
+}
+
+// POST connect to a node
+func ConnectToNode(c *gin.Context) {
+	var data LNDOptions
+
+	if err := c.BindJSON(&data); err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Println("host: ", data.Host)
+	fmt.Println("cert: ", data.Cert)
+	fmt.Println("macaroon: ", data.Macaroon)
+
+	newClient, err := NewLNDclient(data)
+	if err != nil {
+		log.Println(err.Error())
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "client couldn't connect"})
+		return
+	}
+
+	token := strings.Replace(uuid.New().String(), "-", "", -1)
+	fmt.Println("token: ", token)
+
+	fmt.Printf("NEW CLIENT: %+v\n", newClient)
+
+	getInfoResponse, _ := newClient.lndClient.GetInfo(newClient.ctx, &lnrpc.GetInfoRequest{})
+
+	fmt.Printf("GET INFO: %+v\n", getInfoResponse)
+
+	// if exists {
+	// 	c.IndentedJSON(http.StatusOK, g)
+	// 	return
+	// }
+
+	c.String(http.StatusCreated, "hello")
+	// c.IndentedJSON(http.StatusNotFound, gin.H{"message": "game not found"})
+}
+
+// NewLNDclient creates a new LNDclient instance.
+func NewLNDclient(lndOptions LNDOptions) (LNDClient, error) {
+	result := LNDClient{}
+
+	// lndOptions = assignLNDdefaultValues(lndOptions)
+
+	decodedCert, err := hex.DecodeString(lndOptions.Cert)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Set up a connection to the server.
+	creds, err := NewClientTLSFromString(string(decodedCert), "")
+	if err != nil {
+		return result, err
+	}
+	conn, err := grpc.Dial(lndOptions.Host, grpc.WithTransportCredentials(creds))
+	if err != nil {
+		return result, err
+	}
+	c := lnrpc.NewLightningClient(conn)
+
+	// Add the macaroon to the outgoing context
+
+	// macaroon, err := ioutil.ReadFile(lndOptions.MacaroonFile)
+	// if err != nil {
+	// 	return result, err
+	// }
+	// // Value must be the hex representation of the file content
+	// macaroonHex := hex.EncodeToString(macaroon)
+	ctx := context.Background()
+	ctx = metadata.AppendToOutgoingContext(ctx, "macaroon", lndOptions.Macaroon)
+
+	result = LNDClient{
+		conn:      conn,
+		ctx:       ctx,
+		lndClient: c,
+	}
+
+	return result, nil
+}
+
+func NewClientTLSFromString(certString, serverNameOverride string) (credentials.TransportCredentials, error) {
+	b := []byte(certString)
+	cp := x509.NewCertPool()
+	if !cp.AppendCertsFromPEM(b) {
+		return nil, fmt.Errorf("credentials: failed to append certificates")
+	}
+	return credentials.NewTLS(&tls.Config{ServerName: serverNameOverride, RootCAs: cp}), nil
+}
+
+// // GenerateInvoice generates an invoice with the given price and memo.
+// func (c LNDclient) GetInfo(amount int64, memo string) (Invoice, error) {
+// 	result := Invoice{}
+
+// 	// Create the request and send it
+// 	invoice := lnrpc.Invoice{
+// 		Memo:  memo,
+// 		Value: amount,
+// 	}
+// 	stdOutLogger.Println("Creating invoice for a new API request")
+// 	res, err := c.lndClient.AddInvoice(c.ctx, &invoice)
+// 	if err != nil {
+// 		return result, err
+// 	}
+
+// 	result.ImplDepID = hex.EncodeToString(res.RHash)
+// 	result.PaymentHash = result.ImplDepID
+// 	result.PaymentRequest = res.PaymentRequest
+// 	return result, nil
+// }
+
+// // GenerateInvoice generates an invoice with the given price and memo.
+// func (c LNDclient) GenerateInvoice(amount int64, memo string) (Invoice, error) {
+// 	result := Invoice{}
+
+// 	// Create the request and send it
+// 	invoice := lnrpc.Invoice{
+// 		Memo:  memo,
+// 		Value: amount,
+// 	}
+// 	stdOutLogger.Println("Creating invoice for a new API request")
+// 	res, err := c.lndClient.AddInvoice(c.ctx, &invoice)
+// 	if err != nil {
+// 		return result, err
+// 	}
+
+// 	result.ImplDepID = hex.EncodeToString(res.RHash)
+// 	result.PaymentHash = result.ImplDepID
+// 	result.PaymentRequest = res.PaymentRequest
+// 	return result, nil
+// }

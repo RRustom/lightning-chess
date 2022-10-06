@@ -17,7 +17,15 @@ const LandingPage = () => {
   }, []);
 
   return (
-    <div>
+    <div
+      style={{
+        display: 'flex',
+        flexFlow: 'column nowrap',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+      }}
+    >
       <h1>Welcome to Lightning Chess ⚡</h1>
       <SignUpButton />
       {userName && !redirectTo && <StartGameButton />}
