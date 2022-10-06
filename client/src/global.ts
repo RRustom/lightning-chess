@@ -3,6 +3,11 @@ export enum Color {
   Black = 'black',
 }
 
+export enum Outcome {
+  WhiteWon = '1-0',
+  BlackWon = '0-1',
+}
+
 export type User = {
   username: string;
   id: number;

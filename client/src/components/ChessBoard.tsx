@@ -3,10 +3,12 @@ import { Chessboard } from 'react-chessboard';
 import GameAPI from '../api/game';
 import useAuth from '../context/auth';
 import { useParams } from 'react-router-dom';
-import { Color, Move } from '../global';
+import { Color, Move, Outcome } from '../global';
 import useGame from '../context/game';
 // import Chess from 'chess.js';
 // import Chessground from '@react-chess/chessground';
+import useWindowSize from '../hooks/useWindowSize';
+import Confetti from 'react-confetti';
 
 export default function ChessBoard() {
   const { userId, currentColor } = useAuth();
@@ -14,9 +16,26 @@ export default function ChessBoard() {
   const [rightClickedSquares, setRightClickedSquares] = useState({});
   const [moveSquares, setMoveSquares] = useState({});
   const [optionSquares, setOptionSquares] = useState({});
+  const [showConfetti, setShowConfetti] = useState(false);
+  const size = useWindowSize();
 
-  const { gameUuid, validMoves, opponent, sendMove, currentFEN, isMyTurn } =
-    useGame();
+  const {
+    gameUuid,
+    validMoves,
+    opponent,
+    sendMove,
+    currentFEN,
+    isMyTurn,
+    outcome,
+  } = useGame();
+
+  useEffect(() => {
+    if (outcome === Outcome.WhiteWon) {
+      setShowConfetti(currentColor === Color.White);
+    } else if (outcome === Outcome.BlackWon) {
+      setShowConfetti(currentColor === Color.Black);
+    }
+  }, [outcome]);
 
   const makeMove = async (move: string) => {
     try {
@@ -95,6 +114,10 @@ export default function ChessBoard() {
     }
   }
 
+  function onPieceClick(piece: any) {
+    console.log('PIECE: ', piece);
+  }
+
   function onDrop(sourceSquare: string, targetSquare: string) {
     // const move = makeAMove({
     //     from: sourceSquare,
@@ -121,7 +144,21 @@ export default function ChessBoard() {
   console.log('CUSTOM SQUARE STYLES: ', customSquareStyles);
 
   return (
-    <div>
+    <div
+      style={{
+        display: 'flex',
+        flexFlow: 'column nowrap',
+        alignItems: 'center',
+      }}
+    >
+      <Confetti
+        width={size.width}
+        height={size.height}
+        run={showConfetti}
+        numberOfPieces={400}
+        recycle={false}
+      />
+      <div>{`Outcome: ${getOutcomeMessage(outcome, currentColor)}`}</div>
       <div>
         {opponent.id ? `Playing against ${opponent.username}` : NO_OPPONENT}
       </div>
@@ -136,12 +173,30 @@ export default function ChessBoard() {
         }}
         boardOrientation={currentColor}
         onSquareClick={onSquareClick}
+        onPieceClick={onPieceClick}
         customSquareStyles={customSquareStyles}
       />
       {isMyTurn && <div>It's your turn!</div>}
     </div>
   );
 }
+
+const getOutcomeMessage = (
+  outcome: string | null,
+  color: Color,
+): string | null => {
+  if (outcome === Outcome.WhiteWon) {
+    return color === Color.White
+      ? 'Congrats, you won!'
+      : 'White won, tough luck!';
+  } else if (outcome === Outcome.BlackWon) {
+    return color === Color.White
+      ? 'Black won, tough luck!'
+      : 'Congrats, you won!';
+  } else {
+    return outcome;
+  }
+};
 
 const isValidMove = (uci: string, validMoves: Move[]): boolean => {
   return validMoves.filter((x) => x.uci === uci).length === 1;

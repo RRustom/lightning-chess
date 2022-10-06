@@ -58,7 +58,13 @@ export const GameProvider = ({ children }: any) => {
   const [currentTurn, setCurrentTurn] = useState(0);
   const [isMyTurn, setIsMyTurn] = useState(false);
 
-  const { socket } = useGameWebSocket(gameUuid);
+  const { socket } = useGameWebSocket(
+    currentColor == Color.White
+      ? gameUuid
+      : opponent && opponent.id && gameUuid
+      ? gameUuid
+      : undefined,
+  );
 
   // Initialize the game
   useEffect(() => {
@@ -215,8 +221,8 @@ const __fetchGameData = async (
     const response = await GameAPI.getGameByUuid(gameUuid);
     console.log('FETCHED GAME: ', response.data);
     setPositions(response.data.positions);
-    setPgn(response.data.pgn);
-    setMoves(parseGame(response.data.pgn).moves);
+    // setPgn(response.data.pgn);
+    // setMoves(parseGame(response.data.pgn).moves);
     if (currentColor === Color.Black) {
       setOpponent((x: User) => ({ ...x, id: response.data.whiteId }));
     } else {

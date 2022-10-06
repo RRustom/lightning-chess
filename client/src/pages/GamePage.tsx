@@ -62,7 +62,6 @@ function GamePage() {
             <InviteButton />
             <ChessBoard />
             {/* <ChatHistory chatHistory={chatHistory} /> */}
-            <button onClick={send}>Hit</button>
           </div>
         )}
       </GameProvider>

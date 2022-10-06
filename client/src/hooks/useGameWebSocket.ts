@@ -12,35 +12,42 @@ const useGameWebSocket = (gameUuid: string | undefined) => {
   const [conn, setConn] = useState<WebSocket | null>(null);
 
   useEffect(() => {
-    const socket = new WebSocket('ws://' + SOCKET_SERVER_URL + '/' + gameUuid);
-    setConn(socket);
+    if (gameUuid) {
+      const socket = new WebSocket(
+        'ws://' + SOCKET_SERVER_URL + '/' + gameUuid,
+      );
+      setConn(socket);
 
-    console.log('Attempting WS Connection...');
+      console.log('Attempting WS Connection...');
 
-    socket.onopen = () => {
-      console.log('Successfully Connected');
-    };
+      socket.onopen = () => {
+        console.log('Successfully Connected');
+      };
 
-    socket.onerror = (error) => {
-      console.log('Socket Error: ', error);
-    };
+      socket.onerror = (error) => {
+        console.log('Socket Error: ', error);
+      };
 
-    //   socket.onmessage = function (evt) {
-    //     onReceiveMessage(evt)
+      socket.onclose = (event) => {
+        console.log('Socket Closed Connection: ', event);
+      };
 
-    //     // setValidMoves(response.data.moves.map((x: string) => parseUCI(x)))
-    //     // let messages = evt.data.split('\n');
-    //     // for (let i = 0; i < messages.length; i++) {
-    //     //     let item = document.createElement("div");
-    //     //     item.innerText = messages[i];
-    //     //     setMessages(item);
-    //     // }
-    //     // updateTurn(moves.length)
-    //  }
+      //   socket.onmessage = function (evt) {
+      //     onReceiveMessage(evt)
 
-    return () => {
-      socket && socket.close();
-    };
+      //     // setValidMoves(response.data.moves.map((x: string) => parseUCI(x)))
+      //     // let messages = evt.data.split('\n');
+      //     // for (let i = 0; i < messages.length; i++) {
+      //     //     let item = document.createElement("div");
+      //     //     item.innerText = messages[i];
+      //     //     setMessages(item);
+      //     // }
+      //     // updateTurn(moves.length)
+      //  }
+      return () => {
+        socket && socket.close();
+      };
+    }
   }, [gameUuid]);
 
   // useEffect(() => {
