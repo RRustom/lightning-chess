@@ -4,13 +4,10 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"sync/atomic"
 
 	"github.com/RRustom/lightning-chess/pkg/db"
 	"github.com/gin-gonic/gin"
 )
-
-var maxId uint64
 
 type NewUserData struct {
 	Username string `json:"username"`
@@ -40,14 +37,7 @@ func PostNewUser(c *gin.Context) {
 		return
 	}
 
-	atomic.AddUint64(&maxId, 1)
-	userId := int(atomic.LoadUint64(&maxId))
-
-	newUser := db.User{
-		Id:       userId,
-		Username: data.Username,
-	}
-	db.Users[userId] = newUser
+	userId := db.CreateNewUser(data.Username)
 
 	c.String(http.StatusCreated, strconv.Itoa(userId))
 }

@@ -17,13 +17,13 @@ type LNDNode struct {
 // LNDclient is an implementation of the wall.LNClient and pay.LNClient interface
 // for the lnd Lightning Network node implementation.
 type LNDClient struct {
-	lndClient lnrpc.LightningClient
-	ctx       context.Context
-	conn      *grpc.ClientConn
+	LndClient lnrpc.LightningClient
+	Ctx       context.Context
+	Conn      *grpc.ClientConn
 }
 
 type NodeSession struct {
-	NodeID string
+	NodeId string
 	Expiry time.Time
 }
 
@@ -34,5 +34,5 @@ func (s NodeSession) IsExpired() bool {
 // token to Node session
 var Sessions = make(map[string]NodeSession)
 
-// node ID to Node mapping
-var Nodes = make(map[string]LNDNode)
+// node ID to LNDClient
+var Nodes = make(map[string]LNDClient)

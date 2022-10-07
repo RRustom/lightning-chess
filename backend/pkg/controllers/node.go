@@ -47,6 +47,12 @@ type LNDOptions struct {
 	Macaroon string `json:"macaroon"`
 }
 
+type LNDConnection struct {
+	NodeId   string `json:"nodeId"`
+	UserId   int    `json:"userId"`
+	Username string `json:"username"`
+}
+
 // POST connect to a node
 func ConnectToNode(c *gin.Context) {
 	var data LNDOptions
@@ -63,6 +69,8 @@ func ConnectToNode(c *gin.Context) {
 	session, sessionExists := db.Sessions[token]
 	var client db.LNDClient
 	var err error
+	var userId int
+	var nodeId string
 
 	// if doesn't exist, or expired, create a new session
 	if !sessionExists || session.IsExpired() {
@@ -79,13 +87,20 @@ func ConnectToNode(c *gin.Context) {
 		fmt.Printf("NEW CLIENT: %+v\n", client)
 
 		getInfoResponse, _ := client.LndClient.GetInfo(client.Ctx, &lnrpc.GetInfoRequest{})
-		nodeID := getInfoResponse.LightningId
+		nodeId = getInfoResponse.LightningId
 
-		db.Nodes[nodeID] = client
+		db.Nodes[nodeId] = client
 
-		// TODO: if new user, create user
+		// if new user, create user
+		userId, err = db.GetUserByNodeID(nodeId)
+		if err != nil {
+			userId = db.CreateNewUser(getInfoResponse.IdentityAddress)
+		}
 
-		newSession := db.NodeSession{NodeID: nodeID, Expiry: expiresAt}
+		// update the user's node
+		db.UserNodes[userId] = nodeId
+
+		newSession := db.NodeSession{NodeId: nodeId, Expiry: expiresAt}
 		db.Sessions[token] = newSession
 
 		// update cookie
@@ -93,25 +108,31 @@ func ConnectToNode(c *gin.Context) {
 		c.SetCookie("ln_chess_auth", token, maxAge, "/", "localhost", false, true)
 	} else {
 		// retrieve client
-		client = db.Nodes[session.NodeID]
+		nodeId = session.NodeId
+		client = db.Nodes[nodeId]
 		fmt.Printf("EXISTING CLIENT: %+v\n", client)
+		userId, _ = db.GetUserByNodeID(nodeId)
 	}
 
-	getInfoResponse, _ := client.LndClient.GetInfo(client.Ctx, &lnrpc.GetInfoRequest{})
+	// getInfoResponse, _ := client.LndClient.GetInfo(client.Ctx, &lnrpc.GetInfoRequest{})
 
-	fmt.Printf("GET INFO: %+v\n", getInfoResponse)
+	// fmt.Printf("GET INFO: %+v\n", getInfoResponse)
 
-	walletBalanceResponse, _ := client.LndClient.WalletBalance(client.Ctx, &lnrpc.WalletBalanceRequest{})
+	// walletBalanceResponse, _ := client.LndClient.WalletBalance(client.Ctx, &lnrpc.WalletBalanceRequest{})
 
-	fmt.Printf("WALLET BALANCE: %+v\n", walletBalanceResponse)
+	// fmt.Printf("WALLET BALANCE: %+v\n", walletBalanceResponse)
 
 	// if exists {
 	// 	c.IndentedJSON(http.StatusOK, g)
 	// 	return
 	// }
 
-	c.String(http.StatusOK, "hello")
+	user, _ := db.Users[userId]
+
+	// c.String(http.StatusOK, "hello")
+	c.IndentedJSON(http.StatusOK, LNDConnection{NodeId: nodeId, UserId: userId, Username: user.Username})
 	// c.IndentedJSON(http.StatusNotFound, gin.H{"message": "game not found"})
+	return
 }
 
 // NewLNDclient creates a new LNDclient instance.

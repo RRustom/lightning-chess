@@ -126,7 +126,7 @@ const __connectToNode = async (
   host: string,
   cert: string,
   macaroon: string,
-  setNodeIdentity: () => void,
+  setNodeIdentity: (nodeIdentity: string) => void,
 ) => {
   try {
     // if (!gameUuid) return;

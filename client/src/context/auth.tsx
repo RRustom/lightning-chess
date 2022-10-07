@@ -15,7 +15,7 @@ export type AuthContextType = {
   startGame: () => void;
   currentColor: Color;
   nodeIdentity: string;
-  setNodeIdentity: () => void;
+  setNodeIdentity: (nodeIdentity: string) => void;
 };
 
 const AuthContextDefaults = {
@@ -25,7 +25,7 @@ const AuthContextDefaults = {
   startGame: () => null,
   currentColor: Color.Black,
   nodeIdentity: '',
-  setNodeIdentity: () => null,
+  setNodeIdentity: (nodeIdentity: string) => null,
 };
 
 export const AuthContext = createContext<AuthContextType>(AuthContextDefaults);

@@ -13,38 +13,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// define websocket endpoint
-// func serveWs(pool *websocket.Pool, w http.ResponseWriter, r *http.Request) {
-// 	fmt.Println("host: ", r.Host)
-
-// 	// upgrade HTTP connection to a WS connection
-// 	conn, err := websocket.Upgrade(w, r)
-// 	if err != nil {
-// 		log.Println(err)
-// 	}
-
-// 	client := &websocket.Client{
-// 		Conn: conn,
-// 		Pool: pool,
-// 	}
-
-// 	pool.Register <- client
-// 	client.Read()
-// }
-
-// func setupRoutes() {
-// 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-// 		fmt.Fprintf(w, "Simple Server")
-// 	})
-
-// 	pool := websocket.NewPool()
-// 	go pool.Start()
-
-// 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-// 		serveWs(pool, w, r)
-// 	})
-// }
-
 // authentication middleware
 func AuthRequired(c *gin.Context) {
 	// read session token from cookie
