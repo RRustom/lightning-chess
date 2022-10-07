@@ -5,6 +5,9 @@ import LandingPage from './pages/LandingPage';
 import ErrorPage from './pages/ErrorPage';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import { BrowserRouter } from 'react-router-dom';
+import { AuthProvider } from './context/auth';
+import NavBar from './components/NavBar';
 
 const darkTheme = createTheme({
   palette: {
@@ -16,12 +19,17 @@ export default function App() {
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
-      <Routes>
-        <Route path={`/:uuid`} element={<GamePage />} />
-        <Route path="/" element={<LandingPage />} />
+      <AuthProvider>
+        <BrowserRouter>
+          <NavBar />
+          <Routes>
+            <Route path={`/:uuid`} element={<GamePage />} />
+            <Route path="/" element={<LandingPage />} />
 
-        {/* <Route path="*" element={<ErrorPage />} /> */}
-      </Routes>
+            {/* <Route path="*" element={<ErrorPage />} /> */}
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

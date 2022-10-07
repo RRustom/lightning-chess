@@ -10,20 +10,11 @@ import (
 
 	"time"
 
+	"github.com/RRustom/lightning-chess/pkg/db"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/notnil/chess"
 )
-
-type Game struct {
-	Uuid uuid.UUID `json:"uuid"`
-	// Pgn       string    `json:"pgn"`     // PGN format for the whole game, with metadata
-	WhiteId   int       `json:"whiteId"` // white player ID
-	BlackId   int       `json:"blackId"` // black player ID
-	Positions []string  `json:"moves"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
-}
 
 type NewGameData struct {
 	WhiteId int `json:"whiteId"`
@@ -50,50 +41,15 @@ type ValidMovesData struct {
 	Moves []string `json:"moves"`
 }
 
-func (g *Game) getGameLatestPosition() *chess.Game {
-	// pgnReader := strings.NewReader(g.Pgn)
-	// fmt.Println("READING g.PGN: ", g.Pgn)
-	// pgn, err := chess.PGN(pgnReader)
-
-	// fmt.Println("FINISHED READING PGN FROM GAME: ", )
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-
-	lp := g.Positions[len(g.Positions)-1]
-	fmt.Println("Latest position: ", lp)
-
-	fen, _ := chess.FEN(lp)
-	return chess.NewGame(chess.UseNotation(chess.UCINotation{}), fen) //  chess.UseNotation(chess.AlgebraicNotation{}) chess.UseNotation(chess.UCINotation{})
-}
-
-func getGamePositionData(g Game, game *chess.Game) GamePositionData {
+func getGamePositionData(g db.Game, game *chess.Game) GamePositionData {
 	// game := g.getGameLatestPosition()
 	fen := game.Position().String()
 	turns := len(g.Positions) - 1
 	return GamePositionData{Fen: fen, Outcome: game.Outcome().String(), NumTurn: turns}
 }
 
-func (g *Game) isPlayerIdTurn(playerId int) (bool, error) {
-	turns := len(g.Positions) - 1 // account for initial empty board
-	fmt.Println("number turns played: ", turns)
-
-	// fmt.Printf("%+v\n", *g)
-	// fmt.Println("turns: ", turns)
-	// fmt.Println("moves: ", moves)
-	// fmt.Println("BlackId: ", g.BlackId)
-
-	if playerId == g.WhiteId {
-		return turns%2 == 0, nil
-	} else if playerId == g.BlackId {
-		return turns%2 == 1, nil
-	}
-
-	return false, errors.New("player is not part of the game")
-}
-
 // rudimentary storage
-var games = make(map[uuid.UUID]Game)
+var games = make(map[uuid.UUID]db.Game)
 
 // TODO: calculate turn # from PGN
 
@@ -115,7 +71,7 @@ func PostNewGame(c *gin.Context) {
 
 	positions := []string{g.Position().String()}
 
-	newGame := Game{
+	newGame := db.Game{
 		Uuid:      uuid.New(),
 		WhiteId:   data.WhiteId,
 		CreatedAt: time.Now(),
@@ -154,7 +110,7 @@ func GetValidMoves(c *gin.Context) {
 		return
 	}
 
-	game := g.getGameLatestPosition()
+	game := g.GetLatestPosition()
 	fmt.Println("GAME: ", game)
 	validMoves := game.ValidMoves()
 	fmt.Println("validMoves: ", validMoves)
@@ -240,19 +196,19 @@ func MakeMove(data MoveData) ([]byte, error) {
 
 	fmt.Printf("Found game: %+v\n", g)
 
-	_, userExists := Users[data.PlayerId]
+	_, userExists := db.Users[data.PlayerId]
 	if !userExists {
 		// c.IndentedJSON(http.StatusNotFound, gin.H{"message": "user not found"})
 		return []byte{}, errors.New("user not found")
 	}
 
-	isCorrectPlayer, err := g.isPlayerIdTurn(data.PlayerId)
+	isCorrectPlayer, err := g.IsPlayerIdTurn(data.PlayerId)
 	if !isCorrectPlayer || err != nil {
 		// c.IndentedJSON(http.StatusNotFound, gin.H{"message": "not your turn!"})
 		return []byte{}, errors.New("not your turn!")
 	}
 
-	game := g.getGameLatestPosition()
+	game := g.GetLatestPosition()
 
 	fmt.Println("game outcome: ", game.Outcome())
 	fmt.Println(game.String())

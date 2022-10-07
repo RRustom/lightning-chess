@@ -13,6 +13,7 @@ import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import AuthAPI from '../api/auth';
 import { responsiveProperty } from '@mui/material/styles/cssUtils';
+import useAuth from '../context/auth';
 // import { observer } from 'mobx-react-lite';
 // import { useStore } from '../store/Provider';
 
@@ -22,6 +23,7 @@ type Props = {
 };
 
 const ConnectForm = (props: Props) => {
+  const { setNodeIdentity } = useAuth();
   // const store = useStore();
   const navigate = useNavigate();
   const [host, setHost] = useState('');
@@ -37,7 +39,7 @@ const ConnectForm = (props: Props) => {
   // );
   const handleSubmit = (evt: any) => {
     evt.preventDefault();
-    __connectToNode(host, cert, macaroon);
+    __connectToNode(host, cert, macaroon, setNodeIdentity);
     // handleClose()
   };
 
@@ -124,6 +126,7 @@ const __connectToNode = async (
   host: string,
   cert: string,
   macaroon: string,
+  setNodeIdentity: () => void,
 ) => {
   try {
     // if (!gameUuid) return;

@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"google.golang.org/grpc"
 
@@ -16,6 +17,7 @@ import (
 
 	"encoding/hex"
 
+	"github.com/RRustom/lightning-chess/pkg/db"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/lightningnetwork/lnd/lnrpc"
@@ -28,21 +30,6 @@ import (
 // method: connect to LND node: host, cert, macaroon => token, pubkey
 
 // method: listen for payments
-
-type LNDNode struct {
-	Token    string
-	Host     string
-	Cert     string
-	Macaroon string
-}
-
-// LNDclient is an implementation of the wall.LNClient and pay.LNClient interface
-// for the lnd Lightning Network node implementation.
-type LNDClient struct {
-	lndClient lnrpc.LightningClient
-	ctx       context.Context
-	conn      *grpc.ClientConn
-}
 
 // LNDoptions are the options for the connection to the lnd node.
 type LNDOptions struct {
@@ -60,16 +47,6 @@ type LNDOptions struct {
 	Macaroon string `json:"macaroon"`
 }
 
-// rudimentary storage
-var nodes = make(map[string]LNDNode)
-
-// DefaultLNDoptions provides default values for LNDoptions.
-var DefaultLNDoptions = LNDOptions{
-	Host:     "localhost:10009",
-	Cert:     "tls.cert",
-	Macaroon: "invoice.macaroon",
-}
-
 // POST connect to a node
 func ConnectToNode(c *gin.Context) {
 	var data LNDOptions
@@ -79,38 +56,67 @@ func ConnectToNode(c *gin.Context) {
 		return
 	}
 
-	fmt.Println("host: ", data.Host)
-	fmt.Println("cert: ", data.Cert)
-	fmt.Println("macaroon: ", data.Macaroon)
+	// read session token from cookie
+	token, _ := c.Cookie("ln_chess_auth")
 
-	newClient, err := NewLNDclient(data)
-	if err != nil {
-		log.Println(err.Error())
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "client couldn't connect"})
-		return
+	// fetch session by token
+	session, sessionExists := db.Sessions[token]
+	var client db.LNDClient
+	var err error
+
+	// if doesn't exist, or expired, create a new session
+	if !sessionExists || session.IsExpired() {
+		token := strings.Replace(uuid.NewString(), "-", "", -1)
+		fmt.Println("token: ", token)
+		expiresAt := time.Now().Add(24 * time.Hour)
+
+		client, err = NewLNDclient(data)
+		if err != nil {
+			log.Println(err.Error())
+			c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "client couldn't connect"})
+			return
+		}
+		fmt.Printf("NEW CLIENT: %+v\n", client)
+
+		getInfoResponse, _ := client.LndClient.GetInfo(client.Ctx, &lnrpc.GetInfoRequest{})
+		nodeID := getInfoResponse.LightningId
+
+		db.Nodes[nodeID] = client
+
+		// TODO: if new user, create user
+
+		newSession := db.NodeSession{NodeID: nodeID, Expiry: expiresAt}
+		db.Sessions[token] = newSession
+
+		// update cookie
+		maxAge := 86400 // 24 hours
+		c.SetCookie("ln_chess_auth", token, maxAge, "/", "localhost", false, true)
+	} else {
+		// retrieve client
+		client = db.Nodes[session.NodeID]
+		fmt.Printf("EXISTING CLIENT: %+v\n", client)
 	}
 
-	token := strings.Replace(uuid.New().String(), "-", "", -1)
-	fmt.Println("token: ", token)
-
-	fmt.Printf("NEW CLIENT: %+v\n", newClient)
-
-	getInfoResponse, _ := newClient.lndClient.GetInfo(newClient.ctx, &lnrpc.GetInfoRequest{})
+	getInfoResponse, _ := client.LndClient.GetInfo(client.Ctx, &lnrpc.GetInfoRequest{})
 
 	fmt.Printf("GET INFO: %+v\n", getInfoResponse)
+
+	walletBalanceResponse, _ := client.LndClient.WalletBalance(client.Ctx, &lnrpc.WalletBalanceRequest{})
+
+	fmt.Printf("WALLET BALANCE: %+v\n", walletBalanceResponse)
 
 	// if exists {
 	// 	c.IndentedJSON(http.StatusOK, g)
 	// 	return
 	// }
 
-	c.String(http.StatusCreated, "hello")
+	c.String(http.StatusOK, "hello")
 	// c.IndentedJSON(http.StatusNotFound, gin.H{"message": "game not found"})
 }
 
 // NewLNDclient creates a new LNDclient instance.
-func NewLNDclient(lndOptions LNDOptions) (LNDClient, error) {
-	result := LNDClient{}
+func NewLNDclient(lndOptions LNDOptions) (db.LNDClient, error) {
+	result := db.LNDClient{}
 
 	// lndOptions = assignLNDdefaultValues(lndOptions)
 
@@ -141,10 +147,10 @@ func NewLNDclient(lndOptions LNDOptions) (LNDClient, error) {
 	ctx := context.Background()
 	ctx = metadata.AppendToOutgoingContext(ctx, "macaroon", lndOptions.Macaroon)
 
-	result = LNDClient{
-		conn:      conn,
-		ctx:       ctx,
-		lndClient: c,
+	result = db.LNDClient{
+		Conn:      conn,
+		Ctx:       ctx,
+		LndClient: c,
 	}
 
 	return result, nil

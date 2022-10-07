@@ -6,13 +6,9 @@ import (
 	"strconv"
 	"sync/atomic"
 
+	"github.com/RRustom/lightning-chess/pkg/db"
 	"github.com/gin-gonic/gin"
 )
-
-type User struct {
-	Id       int    `json:"id"`
-	Username string `json:"username"`
-}
 
 var maxId uint64
 
@@ -20,14 +16,12 @@ type NewUserData struct {
 	Username string `json:"username"`
 }
 
-var Users = make(map[int]User)
-
 // GET game by uuid -> return FEN + outcome
 func GetUserById(c *gin.Context) {
 	userId := c.Param("id")
 	id, _ := strconv.Atoi(userId)
 
-	user, exists := Users[id]
+	user, exists := db.Users[id]
 
 	if exists {
 		c.IndentedJSON(http.StatusOK, user)
@@ -49,11 +43,11 @@ func PostNewUser(c *gin.Context) {
 	atomic.AddUint64(&maxId, 1)
 	userId := int(atomic.LoadUint64(&maxId))
 
-	newUser := User{
+	newUser := db.User{
 		Id:       userId,
 		Username: data.Username,
 	}
-	Users[userId] = newUser
+	db.Users[userId] = newUser
 
 	c.String(http.StatusCreated, strconv.Itoa(userId))
 }

@@ -14,6 +14,8 @@ export type AuthContextType = {
   signUp: () => void;
   startGame: () => void;
   currentColor: Color;
+  nodeIdentity: string;
+  setNodeIdentity: () => void;
 };
 
 const AuthContextDefaults = {
@@ -22,6 +24,8 @@ const AuthContextDefaults = {
   signUp: () => null,
   startGame: () => null,
   currentColor: Color.Black,
+  nodeIdentity: '',
+  setNodeIdentity: () => null,
 };
 
 export const AuthContext = createContext<AuthContextType>(AuthContextDefaults);
@@ -30,6 +34,7 @@ export const AuthProvider = ({ children }: any) => {
   const [userName, setUserName] = useState<string | null>(null);
   const [userId, setUserId] = useState<number>(0);
   const [currentColor, setCurrentColor] = useState<Color>(Color.Black);
+  const [nodeIdentity, setNodeIdentity] = useState('');
 
   const signUp = async () => {
     if (!userName) {
@@ -57,8 +62,18 @@ export const AuthProvider = ({ children }: any) => {
       signUp,
       startGame,
       currentColor,
+      nodeIdentity,
+      setNodeIdentity,
     }),
-    [userName, userId, signUp, startGame, currentColor],
+    [
+      userName,
+      userId,
+      signUp,
+      startGame,
+      currentColor,
+      nodeIdentity,
+      setNodeIdentity,
+    ],
   );
 
   return (
