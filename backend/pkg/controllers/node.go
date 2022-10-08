@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -50,6 +51,20 @@ type LNDOptions struct {
 type LNDConnection struct {
 	NodeId string  `json:"nodeId"`
 	User   db.User `json:"user"`
+}
+
+// HashPreimage turns a hex encoded preimage into a hex encoded preimage hash.
+// It's the same format that's being used by "lncli listpayments", Eclair on Android and bolt11 payment request decoders like https://lndecode.com.
+// Only "lncli listinvoices" uses Base64.
+func HashPreimage(preimageHex string) (string, error) {
+	// Decode from hex, hash, encode to hex
+	preimage, err := hex.DecodeString(preimageHex)
+	if err != nil {
+		return "", err
+	}
+	hashByteArray := sha256.Sum256(preimage)
+	preimageHashHex := hex.EncodeToString(hashByteArray[:])
+	return preimageHashHex, nil
 }
 
 // POST connect to a node
@@ -260,23 +275,24 @@ func NewClientTLSFromString(certString, serverNameOverride string) (credentials.
 // 	return result, nil
 // }
 
-// // GenerateInvoice generates an invoice with the given price and memo.
-// func (c LNDclient) GenerateInvoice(amount int64, memo string) (Invoice, error) {
-// 	result := Invoice{}
+// GenerateInvoice generates an invoice with the given price and memo.
+func GenerateInvoice(client db.LNDClient, amount int64, memo string) (db.Invoice, error) {
+	result := db.Invoice{}
 
-// 	// Create the request and send it
-// 	invoice := lnrpc.Invoice{
-// 		Memo:  memo,
-// 		Value: amount,
-// 	}
-// 	stdOutLogger.Println("Creating invoice for a new API request")
-// 	res, err := c.lndClient.AddInvoice(c.ctx, &invoice)
-// 	if err != nil {
-// 		return result, err
-// 	}
+	// Create the request and send it
+	invoice := lnrpc.Invoice{
+		Memo:  memo,
+		Value: amount,
+	}
+	fmt.Println("Creating invoice with memo: ", memo)
+	res, err := client.LndClient.AddInvoice(client.Ctx, &invoice)
+	if err != nil {
+		fmt.Println("Error generating invoice: ", err)
+		return result, err
+	}
 
-// 	result.ImplDepID = hex.EncodeToString(res.RHash)
-// 	result.PaymentHash = result.ImplDepID
-// 	result.PaymentRequest = res.PaymentRequest
-// 	return result, nil
-// }
+	result.ImplDepID = hex.EncodeToString(res.RHash)
+	result.PaymentHash = result.ImplDepID
+	result.PaymentRequest = res.PaymentRequest
+	return result, nil
+}

@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-
-	"github.com/RRustom/lightning-chess/pkg/websocket"
+	"os"
 
 	"github.com/RRustom/lightning-chess/pkg/controllers"
 	"github.com/RRustom/lightning-chess/pkg/db"
+	"github.com/RRustom/lightning-chess/pkg/lnd"
+	"github.com/RRustom/lightning-chess/pkg/websocket"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
@@ -81,18 +82,23 @@ func serveWs(w http.ResponseWriter, r *http.Request, gameUuid string) {
 }
 
 // connect to our backend LND node
-// func connectToLND() {
-// 	options := controllers.LNDOptions{
-// 		Host:     os.Getenv("LND_HOST"),
-// 		Cert:     os.Getenv("LND_CERT"),
-// 		Macaroon: os.Getenv("LND_MACAROON"),
-// 	}
+// listen to payments made, and broadcast them to WS connections
+func connectToLND() {
+	options := controllers.LNDOptions{
+		Host:     os.Getenv("LND_HOST"),
+		Cert:     os.Getenv("LND_CERT"),
+		Macaroon: os.Getenv("LND_MACAROON"),
+	}
 
-// 	client, err := controllers.NewLNDclient(options)
-// 	if err != nil {
-// 		log.Fatal("Error connecting to LND backend")
-// 	}
-// }
+	client, err := controllers.NewLNDclient(options)
+	if err != nil {
+		log.Fatal("Error connecting to LND backend")
+	}
+
+	db.LNDBackend = client
+
+	go lnd.ListenForPayments(websocket.LocalHub)
+}
 
 func main() {
 	err := godotenv.Load()
@@ -101,6 +107,8 @@ func main() {
 	}
 
 	go websocket.LocalHub.Run()
+
+	connectToLND()
 
 	router := engine()
 	router.Use(gin.Logger())

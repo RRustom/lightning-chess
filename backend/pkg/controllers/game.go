@@ -48,9 +48,6 @@ func getGamePositionData(g db.Game, game *chess.Game) GamePositionData {
 	return GamePositionData{Fen: fen, Outcome: game.Outcome().String(), NumTurn: turns}
 }
 
-// rudimentary storage
-var games = make(map[uuid.UUID]db.Game)
-
 // TODO: calculate turn # from PGN
 
 // // getGames responds with the list of all Games as JSON.
@@ -79,7 +76,9 @@ func PostNewGame(c *gin.Context) {
 		// Pgn:       fmt.Sprint(g),
 		Positions: positions,
 	}
-	games[newGame.Uuid] = newGame
+	db.Games[newGame.Uuid] = newGame
+
+	// TODO: initialize game payments
 
 	c.String(http.StatusCreated, newGame.Uuid.String())
 }
@@ -89,7 +88,7 @@ func GetGameByUuid(c *gin.Context) {
 	uuidString := c.Param("uuid")
 	uuid, _ := uuid.Parse(uuidString)
 
-	g, exists := games[uuid]
+	g, exists := db.Games[uuid]
 
 	if exists {
 		c.IndentedJSON(http.StatusOK, g)
@@ -103,7 +102,7 @@ func GetValidMoves(c *gin.Context) {
 	uuidString := c.Param("uuid")
 	uuid, _ := uuid.Parse(uuidString)
 
-	g, exists := games[uuid]
+	g, exists := db.Games[uuid]
 
 	if !exists {
 		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "game not found"})
@@ -140,10 +139,10 @@ func JoinGame(data JoinGameData) ([]byte, error) {
 
 	uuid, _ := uuid.Parse(data.Uuid)
 
-	g, exists := games[uuid]
+	g, exists := db.Games[uuid]
 	if exists {
 		g.BlackId = data.BlackId
-		games[uuid] = g
+		db.Games[uuid] = g
 
 		// positionData := g.getGamePositionData()
 
@@ -188,7 +187,7 @@ func MakeMove(data MoveData) ([]byte, error) {
 
 	fmt.Printf("player %d wants to move %s \n", data.PlayerId, data.Move)
 
-	g, exists := games[uuid]
+	g, exists := db.Games[uuid]
 	if !exists {
 		// c.IndentedJSON(http.StatusNotFound, gin.H{"message": "game not found"})
 		return []byte{}, errors.New("game not found")
@@ -229,7 +228,7 @@ func MakeMove(data MoveData) ([]byte, error) {
 	// g.Pgn = fmt.Sprint(game)
 	fen := game.Position().String()
 	g.Positions = append(g.Positions, fen)
-	games[uuid] = g
+	db.Games[uuid] = g
 
 	fmt.Println("game after move: ", game)
 	// fmt.Println("PGN of game after move: ", fmt.Sprint(game))
@@ -259,18 +258,35 @@ func MakeMove(data MoveData) ([]byte, error) {
 }
 
 // GET invoice to start the game
-func GetStartInvoice() ([]byte, error) {
-	// TODO generate invoice for each player to pay LND backend
+func GetStartInvoice(playerId int, gameUuid uuid.UUID) ([]byte, error) {
+	client := db.LNDBackend
+	memo := fmt.Sprintf("%v", gameUuid.String())
 
-	// launch a goroutine that polls the LND client until the user pays the invoice
+	invoice, err := GenerateInvoice(client, 1000, memo)
 
-	// when it does, return
+	// TODO: update game payments
+
+	u, _ := json.Marshal(invoice)
+	return u, err
 }
 
-func GetWinningInvoice() ([]byte, error) {
-	// TODO called by MakeMove to generate a a send invoice from LND backend to winner
+func PayWinner(winnerId int, gameUuid uuid.UUID) ([]byte, error) {
+	// called by MakeMove to generate a send invoice from LND backend to winner
 
-	// broadcast when it's completed
+	// find the user's node
+	var nodeId string
+	for userId, nId := range db.UserNodes {
+		if userId == winnerId {
+			nodeId = nId
+			break
+		}
+	}
 
-	//
+	client := db.Nodes[nodeId]
+	memo := fmt.Sprintf("%v", gameUuid.String())
+
+	invoice, err := GenerateInvoice(client, 2000, memo)
+
+	u, _ := json.Marshal(invoice)
+	return u, err
 }

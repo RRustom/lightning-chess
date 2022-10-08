@@ -19,6 +19,21 @@ type Game struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
+type GamePayment struct {
+	GameUuid       uuid.UUID
+	WhiteInvoice   Invoice
+	BlackInvoice   Invoice
+	DidWhitePay    bool
+	DidBlackPay    bool
+	WinningInvoice Invoice
+}
+
+// uuid to Game
+var Games = make(map[uuid.UUID]Game)
+
+// uuid to GamePayment
+var GamePayments = make(map[uuid.UUID]GamePayment)
+
 func (g *Game) GetLatestPosition() *chess.Game {
 	// pgnReader := strings.NewReader(g.Pgn)
 	// fmt.Println("READING g.PGN: ", g.Pgn)
