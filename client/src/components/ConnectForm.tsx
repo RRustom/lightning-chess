@@ -1,8 +1,5 @@
-import React, { useCallback, useState } from 'react';
-// import { Button, Card, Col, Form, Row } from 'react-bootstrap';
-import FormGroup from '@mui/material/FormGroup';
+import { useEffect, useState } from 'react';
 import Button from '@mui/material/Button';
-import InputLabel from '@mui/material/InputLabel';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useNavigate } from 'react-router-dom';
@@ -11,11 +8,7 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
-import AuthAPI from '../api/auth';
-import { responsiveProperty } from '@mui/material/styles/cssUtils';
 import useAuth from '../context/auth';
-// import { observer } from 'mobx-react-lite';
-// import { useStore } from '../store/Provider';
 
 type Props = {
   isOpen: boolean;
@@ -23,24 +16,19 @@ type Props = {
 };
 
 const ConnectForm = (props: Props) => {
-  const { setNodeIdentity } = useAuth();
-  // const store = useStore();
+  const { connectToNode, userName } = useAuth();
   const navigate = useNavigate();
   const [host, setHost] = useState('');
   const [cert, setCert] = useState('');
   const [macaroon, setMacaroon] = useState('');
 
-  // const handleSubmit = useCallback(
-  //   async (e: React.FormEvent<HTMLElement>) => {
-  //     e.preventDefault();
-  //     store.connectToLnd(host, cert, macaroon);
-  //   },
-  //   [host, cert, macaroon, store],
-  // );
+  useEffect(() => {
+    if (userName) handleClose();
+  }, [userName]);
+
   const handleSubmit = (evt: any) => {
     evt.preventDefault();
-    __connectToNode(host, cert, macaroon, setNodeIdentity);
-    // handleClose()
+    connectToNode(host, cert, macaroon);
   };
 
   const handleClose = () => {
@@ -120,27 +108,6 @@ const ConnectForm = (props: Props) => {
       </form>
     </Dialog>
   );
-};
-
-const __connectToNode = async (
-  host: string,
-  cert: string,
-  macaroon: string,
-  setNodeIdentity: (nodeIdentity: string) => void,
-) => {
-  try {
-    // if (!gameUuid) return;
-    const response = await AuthAPI.connectNode(host, cert, macaroon);
-    console.log('RESPONSE: ', response);
-    // console.log('VALID MOVES: ', response.data.moves);
-    // setValidMoves(response.data.moves.map((x: string) => formatMove(x)));
-    console.log('SUBMITTED CONNECT TO LND');
-    console.log('host: ', host);
-    console.log('cert: ', cert);
-    console.log('macaroon: ', macaroon);
-  } catch (err) {
-    console.log(err);
-  }
 };
 
 export default ConnectForm;

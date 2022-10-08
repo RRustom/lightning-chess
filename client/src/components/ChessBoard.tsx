@@ -5,6 +5,9 @@ import { Color, Move, Outcome } from '../global';
 import useGame from '../context/game';
 import useWindowSize from '../hooks/useWindowSize';
 import Confetti from 'react-confetti';
+import InvoiceModal from './InvoiceModal';
+import usePayment from '../context/payment';
+import GameInfo from './GameInfo';
 
 export default function ChessBoard() {
   const { userId, currentColor } = useAuth();
@@ -24,6 +27,14 @@ export default function ChessBoard() {
     isMyTurn,
     outcome,
   } = useGame();
+  const { isPaymentSuccess, canStartGame } = usePayment();
+  const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(true);
+
+  useEffect(() => {
+    if (canStartGame) {
+      setTimeout(() => setIsInvoiceModalOpen(false), 2000);
+    }
+  }, [canStartGame]);
 
   useEffect(() => {
     if (outcome === Outcome.WhiteWon) {
@@ -32,6 +43,10 @@ export default function ChessBoard() {
       setShowConfetti(currentColor === Color.Black);
     }
   }, [outcome]);
+
+  // TODO: don't show board until other player has joined
+  // when other player joins, show modal
+  // when canStartGame, show board and begin game
 
   const makeMove = async (move: string) => {
     try {
@@ -48,10 +63,6 @@ export default function ChessBoard() {
   };
 
   function getMoveOptions(square: string) {
-    // const moves = game.moves({
-    //     square,
-    //     verbose: true
-    // });
     if (validMoves.length === 0) {
       return;
     }
@@ -78,7 +89,6 @@ export default function ChessBoard() {
     newSquares[square] = {
       background: 'rgba(255, 255, 0, 0.4)',
     };
-    console.log('NEW SQUARES: ', newSquares);
     setOptionSquares(newSquares);
   }
 
@@ -137,7 +147,8 @@ export default function ChessBoard() {
     ...optionSquares,
     //...rightClickedSquares
   };
-  console.log('CUSTOM SQUARE STYLES: ', customSquareStyles);
+
+  console.log('OPPONENT: ', opponent);
 
   return (
     <div
@@ -145,6 +156,8 @@ export default function ChessBoard() {
         display: 'flex',
         flexFlow: 'column nowrap',
         alignItems: 'center',
+        height: '100%',
+        // justifyContent: 'center',
       }}
     >
       <Confetti
@@ -154,13 +167,11 @@ export default function ChessBoard() {
         numberOfPieces={400}
         recycle={false}
       />
-      <div>{`Outcome: ${getOutcomeMessage(outcome, currentColor)}`}</div>
-      <div>
-        {opponent.id ? `Playing against ${opponent.username}` : NO_OPPONENT}
-      </div>
+
+      <GameInfo />
       <Chessboard
         animationDuration={200}
-        boardWidth={500}
+        boardWidth={744}
         position={currentFEN}
         onPieceDrop={onDrop}
         customBoardStyle={{
@@ -172,27 +183,10 @@ export default function ChessBoard() {
         onPieceClick={onPieceClick}
         customSquareStyles={customSquareStyles}
       />
-      {isMyTurn && <div>It's your turn!</div>}
+      <InvoiceModal isOpen={isInvoiceModalOpen} />
     </div>
   );
 }
-
-const getOutcomeMessage = (
-  outcome: string | null,
-  color: Color,
-): string | null => {
-  if (outcome === Outcome.WhiteWon) {
-    return color === Color.White
-      ? 'Congrats, you won!'
-      : 'White won, tough luck!';
-  } else if (outcome === Outcome.BlackWon) {
-    return color === Color.White
-      ? 'Black won, tough luck!'
-      : 'Congrats, you won!';
-  } else {
-    return outcome;
-  }
-};
 
 const isValidMove = (uci: string, validMoves: Move[]): boolean => {
   return validMoves.filter((x) => x.uci === uci).length === 1;
@@ -201,5 +195,3 @@ const isValidMove = (uci: string, validMoves: Move[]): boolean => {
 const moveToUCI = (from: string, to: string): string => {
   return from + to;
 };
-
-const NO_OPPONENT = 'Nobody has joined the game yet';

@@ -48,9 +48,8 @@ type LNDOptions struct {
 }
 
 type LNDConnection struct {
-	NodeId   string `json:"nodeId"`
-	UserId   int    `json:"userId"`
-	Username string `json:"username"`
+	NodeId string  `json:"nodeId"`
+	User   db.User `json:"user"`
 }
 
 // POST connect to a node
@@ -88,6 +87,13 @@ func ConnectToNode(c *gin.Context) {
 
 		getInfoResponse, _ := client.LndClient.GetInfo(client.Ctx, &lnrpc.GetInfoRequest{})
 		nodeId = getInfoResponse.LightningId
+		fmt.Println("nodeId: ", nodeId)
+
+		channelBalanceResponse, err := client.LndClient.ChannelBalance(client.Ctx, &lnrpc.ChannelBalanceRequest{})
+		if err != nil {
+			fmt.Println("ERROR: ", err)
+		}
+		fmt.Printf("BALANCE : %+v\n", channelBalanceResponse)
 
 		db.Nodes[nodeId] = client
 
@@ -130,8 +136,55 @@ func ConnectToNode(c *gin.Context) {
 	user, _ := db.Users[userId]
 
 	// c.String(http.StatusOK, "hello")
-	c.IndentedJSON(http.StatusOK, LNDConnection{NodeId: nodeId, UserId: userId, Username: user.Username})
+	c.IndentedJSON(http.StatusOK, LNDConnection{NodeId: nodeId, User: user})
 	// c.IndentedJSON(http.StatusNotFound, gin.H{"message": "game not found"})
+	return
+}
+
+// GET connection data from cookie
+func Authenticate(c *gin.Context) {
+	// read session token from cookie
+	token, _ := c.Cookie("ln_chess_auth")
+
+	// fetch session by token
+	session, sessionExists := db.Sessions[token]
+
+	// if doesn't exist, or expired, create a new session
+	if !sessionExists || session.IsExpired() {
+		c.IndentedJSON(http.StatusOK, LNDConnection{})
+		return
+	} else {
+		// retrieve client
+		nodeId := session.NodeId
+		userId, _ := db.GetUserByNodeID(nodeId)
+		user := db.Users[userId]
+
+		c.IndentedJSON(http.StatusOK, LNDConnection{NodeId: session.NodeId, User: user})
+		return
+	}
+}
+
+// GET wallet balance
+func GetWalletBalance(c *gin.Context) {
+
+	// read session token from cookie
+	token, _ := c.Cookie("ln_chess_auth")
+
+	// fetch session by token
+	session, _ := db.Sessions[token]
+
+	node, _ := db.Nodes[session.NodeId]
+
+	fmt.Printf("NODE: %+v\n", node)
+
+	channelBalanceResponse, err := node.LndClient.ChannelBalance(node.Ctx, &lnrpc.ChannelBalanceRequest{})
+	if err != nil {
+		fmt.Println("ERROR: ", err)
+	}
+
+	fmt.Printf("BALANCE : %+v\n", channelBalanceResponse)
+
+	c.IndentedJSON(http.StatusOK, channelBalanceResponse)
 	return
 }
 

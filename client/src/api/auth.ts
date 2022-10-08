@@ -6,7 +6,11 @@ class AuthAPI {
   }
 
   static async connectNode(host: string, cert: string, macaroon: string) {
-    return axios.post(`/api/lnd/connect`, { host, cert, macaroon });
+    return axios.post(`/api/auth/connect`, { host, cert, macaroon });
+  }
+
+  static async authenticate() {
+    return axios.get(`/api/auth/authenticate`);
   }
 }
 

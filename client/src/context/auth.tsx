@@ -1,31 +1,31 @@
-import React, { createContext, useContext, useState, useMemo } from 'react';
-import {
-  uniqueNamesGenerator,
-  adjectives,
-  colors,
-  animals,
-} from 'unique-names-generator';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useMemo,
+  useEffect,
+} from 'react';
 import AuthAPI from '../api/auth';
 import { Color } from '../global';
 
 export type AuthContextType = {
   userName: string | null;
   userId: number;
-  signUp: () => void;
+  nodeId: string;
+  picture: number;
+  connectToNode: (host: string, cert: string, macaroon: string) => void;
   startGame: () => void;
   currentColor: Color;
-  nodeIdentity: string;
-  setNodeIdentity: (nodeIdentity: string) => void;
 };
 
 const AuthContextDefaults = {
   userName: null,
   userId: 0,
-  signUp: () => null,
+  nodeId: '',
+  picture: 0,
+  connectToNode: () => null,
   startGame: () => null,
   currentColor: Color.Black,
-  nodeIdentity: '',
-  setNodeIdentity: (nodeIdentity: string) => null,
 };
 
 export const AuthContext = createContext<AuthContextType>(AuthContextDefaults);
@@ -33,22 +33,52 @@ export const AuthContext = createContext<AuthContextType>(AuthContextDefaults);
 export const AuthProvider = ({ children }: any) => {
   const [userName, setUserName] = useState<string | null>(null);
   const [userId, setUserId] = useState<number>(0);
+  const [picture, setPicture] = useState<number>(0);
   const [currentColor, setCurrentColor] = useState<Color>(Color.Black);
-  const [nodeIdentity, setNodeIdentity] = useState('');
+  const [nodeId, setNodeId] = useState('');
 
-  const signUp = async () => {
-    if (!userName) {
-      const newUsername = __generateRandomName();
-      setUserName(newUsername);
-
+  useEffect(() => {
+    const __authenticate = async () => {
       try {
-        const response = await AuthAPI.signUp(newUsername);
-        setUserId(parseInt(response.data));
+        const response = await AuthAPI.authenticate();
+        console.log('RESPONSE: ', response.data);
+        if (response.data) {
+          if (response.data.nodeId) setNodeId(response.data.nodeId);
+          if (response.data.user.userName)
+            setUserName(response.data.user.userName);
+          if (response.data.user.id) setUserId(response.data.user.id);
+          if (response.data.user.picture)
+            setPicture(response.data.user.picture);
+        }
       } catch (err) {
-        console.log('error while signing up');
+        console.log(err);
       }
+    };
+
+    __authenticate();
+  }, []);
+
+  const connectToNode = async (
+    host: string,
+    cert: string,
+    macaroon: string,
+  ) => {
+    try {
+      // if (!gameUuid) return;
+      const response = await AuthAPI.connectNode(host, cert, macaroon);
+      console.log('RESPONSE: ', response);
+      if (response.data) {
+        setNodeId(response.data.nodeId);
+        setUserName(response.data.user.userName);
+        setUserId(response.data.user.id);
+        setPicture(response.data.user.picture);
+
+        // seed the jazzicon
+        // setPicture(Math.round(Math.random() * 10000000));
+      }
+    } catch (err) {
+      console.log(err);
     }
-    return;
   };
 
   const startGame = () => {
@@ -59,30 +89,18 @@ export const AuthProvider = ({ children }: any) => {
     () => ({
       userName,
       userId,
-      signUp,
+      nodeId,
+      picture,
+      connectToNode,
       startGame,
       currentColor,
-      nodeIdentity,
-      setNodeIdentity,
     }),
-    [
-      userName,
-      userId,
-      signUp,
-      startGame,
-      currentColor,
-      nodeIdentity,
-      setNodeIdentity,
-    ],
+    [userName, userId, nodeId, picture, connectToNode, startGame, currentColor],
   );
 
   return (
     <AuthContext.Provider value={memoedValue}>{children}</AuthContext.Provider>
   );
-};
-
-const __generateRandomName = (): string => {
-  return uniqueNamesGenerator({ dictionaries: [adjectives, colors, animals] });
 };
 
 export default function useAuth() {

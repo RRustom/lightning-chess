@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuth from '../context/auth';
 import GameAPI from '../api/game';
+import Button from '@mui/material/Button';
 
 const StartGameButton = () => {
   const { userId, startGame } = useAuth();
@@ -17,7 +18,11 @@ const StartGameButton = () => {
     }
   };
 
-  return <button onClick={() => createNewGame()}>Start Game</button>;
+  return (
+    <Button variant="contained" onClick={() => createNewGame()}>
+      New Game
+    </Button>
+  );
 };
 
 export default StartGameButton;

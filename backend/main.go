@@ -11,10 +11,11 @@ import (
 	"github.com/RRustom/lightning-chess/pkg/controllers"
 	"github.com/RRustom/lightning-chess/pkg/db"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 // authentication middleware
-func AuthRequired(c *gin.Context) {
+func authRequired(c *gin.Context) {
 	// read session token from cookie
 	token, _ := c.Cookie("ln_chess_auth")
 
@@ -36,19 +37,22 @@ func engine() *gin.Engine {
 	// router := gin.Default()
 
 	// Login and logout routes
-	router.POST("/api/lnd/connect", controllers.ConnectToNode)
+	router.POST("/api/auth/connect", controllers.ConnectToNode)
+	router.GET("/api/auth/authenticate", controllers.Authenticate)
 	router.POST("/api/user/signup", controllers.PostNewUser)
 	router.GET("/api/user/:id", controllers.GetUserById)
 	router.GET("/api/game/:uuid", controllers.GetGameByUuid)
 
 	// Private group, require authentication to access
 	authorized := router.Group("/")
-	authorized.Use(AuthRequired)
+	authorized.Use(authRequired)
 	{
-		router.GET("/ws/move/game/:uuid", func(c *gin.Context) {
+		router.GET("/ws/game/:uuid", func(c *gin.Context) {
 			gameUuid := c.Param("uuid")
 			serveWs(c.Writer, c.Request, gameUuid)
 		})
+
+		router.GET("/api/user/balance", controllers.GetWalletBalance)
 
 		router.GET("/api/game/moves/:uuid", controllers.GetValidMoves)
 
@@ -76,12 +80,28 @@ func serveWs(w http.ResponseWriter, r *http.Request, gameUuid string) {
 	go s.ReadPump()
 }
 
+// connect to our backend LND node
+// func connectToLND() {
+// 	options := controllers.LNDOptions{
+// 		Host:     os.Getenv("LND_HOST"),
+// 		Cert:     os.Getenv("LND_CERT"),
+// 		Macaroon: os.Getenv("LND_MACAROON"),
+// 	}
+
+// 	client, err := controllers.NewLNDclient(options)
+// 	if err != nil {
+// 		log.Fatal("Error connecting to LND backend")
+// 	}
+// }
+
 func main() {
-	// setupRoutes()
-	// http.ListenAndServe(":8000", nil)
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	go websocket.LocalHub.Run()
 
-	// router := gin.Default()
 	router := engine()
 	router.Use(gin.Logger())
 	if err := engine().Run("localhost:8080"); err != nil {

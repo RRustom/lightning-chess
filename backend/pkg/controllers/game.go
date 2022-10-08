@@ -257,3 +257,20 @@ func MakeMove(data MoveData) ([]byte, error) {
 	// c.IndentedJSON(http.StatusOK, positionData)
 	return u, nil
 }
+
+// GET invoice to start the game
+func GetStartInvoice() ([]byte, error) {
+	// TODO generate invoice for each player to pay LND backend
+
+	// launch a goroutine that polls the LND client until the user pays the invoice
+
+	// when it does, return
+}
+
+func GetWinningInvoice() ([]byte, error) {
+	// TODO called by MakeMove to generate a a send invoice from LND backend to winner
+
+	// broadcast when it's completed
+
+	//
+}

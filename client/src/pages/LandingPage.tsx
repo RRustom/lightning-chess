@@ -6,15 +6,17 @@ import useAuth from '../context/auth';
 
 const LandingPage = () => {
   const { userName } = useAuth();
-  const [redirectTo, setRedirectTo] = useState<string>('');
+  // const [redirectTo, setRedirectTo] = useState<string>('');
 
-  useEffect(() => {
-    const cachedGameUuid = window.localStorage.getItem('gameUuid');
-    if (cachedGameUuid) {
-      window.localStorage.removeItem('gameUuid');
-      setRedirectTo(cachedGameUuid);
-    }
-  }, []);
+  // useEffect(() => {
+  //   const cachedGameUuid = window.localStorage.getItem('gameUuid');
+  //   if (cachedGameUuid) {
+  //     window.localStorage.removeItem('gameUuid');
+  //     setRedirectTo(cachedGameUuid);
+  //   }
+  // }, []);
+
+  // TODO: if not connected, show ConnectForm
 
   return (
     <div
@@ -26,10 +28,18 @@ const LandingPage = () => {
         height: '100%',
       }}
     >
-      <h1>Welcome to Lightning Chess ⚡</h1>
-      <SignUpButton />
-      {userName && !redirectTo && <StartGameButton />}
-      {userName && redirectTo && <Navigate replace to={redirectTo} />}
+      {userName ? (
+        <>
+          <h1>Welcome, {userName}!</h1>
+          <StartGameButton />
+        </>
+      ) : (
+        <>
+          <h1>Welcome to Lightning Chess ⚡</h1>
+          <SignUpButton />
+        </>
+      )}
+      {/* {userName && redirectTo && <Navigate replace to={redirectTo} />} */}
     </div>
   );
 };

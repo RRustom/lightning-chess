@@ -5,11 +5,9 @@ import Button from '@mui/material/Button';
 import ConnectForm from './ConnectForm';
 
 const SignUpButton = () => {
-  const { userName, signUp } = useAuth();
+  const { userName } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const navigate = useNavigate();
-
-  if (userName) return <div>Welcome, {userName}!</div>;
 
   // return <button onClick={() => signUp()}>Sign Up</button>;
   return (

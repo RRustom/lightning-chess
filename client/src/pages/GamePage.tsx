@@ -7,65 +7,36 @@ import InviteButton from '../components/InviteButton';
 import useAuth from '../context/auth';
 import GameAPI from '../api/game';
 import { GameProvider } from '../context/game';
+import { PaymentProvider } from '../context/payment';
 import { Color } from '../global';
 import JoinPage from './JoinPage';
 
-interface ChatHistoryProps {
-  chatHistory: Array<MessageEvent>;
-}
-
-const ChatHistory = ({ chatHistory }: ChatHistoryProps) => {
-  const messages = chatHistory.map((msg, index) => (
-    <p key={index}>{msg.data}</p>
-  ));
-
-  return <div>{messages}</div>;
-};
-
 function GamePage() {
-  const { userName, currentColor } = useAuth();
+  const { userName, currentColor, nodeId } = useAuth();
   const navigate = useNavigate();
-  const [chatHistory, setChatHistory] = useState<MessageEvent[]>([]);
   const { uuid } = useParams();
   const gameUuid = uuid || '';
   const [acceptedInvite, setAcceptedInvite] = useState(false);
 
-  useEffect(() => {
-    if (!userName) {
-      window.localStorage.setItem('gameUuid', gameUuid);
-      navigate(`/`);
-    }
-  }, [userName]);
-
   // useEffect(() => {
-  //   connect((msg) => {
-  //     console.log('New Message: ', msg);
-  //     setChatHistory((x) => [...x, msg]);
-  //   });
-  // }, []);
-
-  const send = () => {
-    console.log('hello');
-    // sendMsg('hello');
-  };
+  //   if (!userName) {
+  //     window.localStorage.setItem('gameUuid', gameUuid);
+  //     navigate(`/`);
+  //   }
+  // }, [userName]);
 
   const showJoinPage = currentColor === Color.Black && !acceptedInvite;
 
   return (
-    <div className="App">
-      <GameProvider>
+    <GameProvider>
+      <PaymentProvider>
         {showJoinPage ? (
           <JoinPage onAccept={() => setAcceptedInvite(true)} />
         ) : (
-          <div>
-            <div>Welcome, {userName}!</div>
-            <InviteButton />
-            <ChessBoard />
-            {/* <ChatHistory chatHistory={chatHistory} /> */}
-          </div>
+          <ChessBoard />
         )}
-      </GameProvider>
-    </div>
+      </PaymentProvider>
+    </GameProvider>
   );
 }
 

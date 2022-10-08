@@ -9,8 +9,9 @@ export enum Outcome {
 }
 
 export type User = {
-  username: string;
+  userName: string;
   id: number;
+  picture: number;
 };
 
 export interface Move {

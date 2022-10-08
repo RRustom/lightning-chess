@@ -34,7 +34,7 @@ const GameContextDefaults = {
   positions: [],
   moves: [],
   pgn: '',
-  opponent: { id: 0, username: '' },
+  opponent: { id: 0, userName: '', picture: 0 },
   validMoves: [],
   isMyTurn: false,
   sendMove: () => null,
@@ -53,7 +53,11 @@ export const GameProvider = ({ children }: any) => {
   const [positions, setPositions] = useState([]);
   const [moves, setMoves] = useState([]);
   const [pgn, setPgn] = useState('');
-  const [opponent, setOpponent] = useState<User>({ id: 0, username: '' });
+  const [opponent, setOpponent] = useState<User>({
+    id: 0,
+    userName: '',
+    picture: 0,
+  });
   const [validMoves, setValidMoves] = useState<Move[]>([]);
   const [currentTurn, setCurrentTurn] = useState(0);
   const [isMyTurn, setIsMyTurn] = useState(false);
@@ -241,7 +245,11 @@ const __fetchOpponentData = async (
   try {
     const response = await UserAPI.getUserById(opponentId);
     console.log('FETCHED OPPONENT: ', response);
-    setOpponent({ id: opponentId, username: response.data.username });
+    setOpponent({
+      id: opponentId,
+      userName: response.data.userName,
+      picture: response.data.picture,
+    });
   } catch (err) {
     console.log(err);
   }

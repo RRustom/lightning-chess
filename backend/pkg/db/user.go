@@ -2,12 +2,14 @@ package db
 
 import (
 	"errors"
+	"math/rand"
 	"sync/atomic"
 )
 
 type User struct {
 	Id       int    `json:"id"`
-	Username string `json:"username"`
+	Username string `json:"userName"`
+	Picture  int    `json:"picture"`
 	NodeId   string `json:"node_id"`
 }
 
@@ -30,9 +32,12 @@ func CreateNewUser(userName string) int {
 	atomic.AddUint64(&maxId, 1)
 	userId := int(atomic.LoadUint64(&maxId))
 
+	picture := rand.Intn(10000000)
+
 	newUser := User{
 		Id:       userId,
 		Username: userName,
+		Picture:  picture,
 	}
 
 	Users[userId] = newUser

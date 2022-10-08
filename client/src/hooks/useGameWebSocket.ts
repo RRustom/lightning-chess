@@ -4,7 +4,7 @@ import socketIOClient from 'socket.io-client';
 import useAuth from '../context/auth';
 
 const NEW_CHAT_MESSAGE_EVENT = 'newChatMessage'; // Name of the event
-const SOCKET_SERVER_URL = 'localhost:8080/ws/move/game';
+const SOCKET_SERVER_URL = 'localhost:8080/ws/game';
 
 const useGameWebSocket = (gameUuid: string | undefined) => {
   const { userId, currentColor } = useAuth();

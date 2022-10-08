@@ -13,8 +13,15 @@ import Tooltip from '@mui/material/Tooltip';
 import PersonAdd from '@mui/icons-material/PersonAdd';
 import Settings from '@mui/icons-material/Settings';
 import Logout from '@mui/icons-material/Logout';
+import useAuth from '../context/auth';
+import Jazzicon from 'react-jazzicon';
+import useWalletBalance from '../hooks/useWalletBalance';
+
+// TODO: nicer display for balance
 
 const NavBar = () => {
+  const { userName, picture } = useAuth();
+  const { walletBalance } = useWalletBalance();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -24,22 +31,19 @@ const NavBar = () => {
     setAnchorEl(null);
   };
 
+  if (!userName) return null;
+
   return (
     <AppBar position="static">
       <Toolbar>
         <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
           Lightning Chess
         </Typography>
+        <Typography component="div">{walletBalance}</Typography>
+        <Typography component="div">{userName}</Typography>
         <Tooltip title="Account settings">
-          <IconButton
-            onClick={handleClick}
-            size="small"
-            sx={{ ml: 2 }}
-            aria-controls={open ? 'account-menu' : undefined}
-            aria-haspopup="true"
-            aria-expanded={open ? 'true' : undefined}
-          >
-            <Avatar sx={{ width: 32, height: 32 }}>M</Avatar>
+          <IconButton onClick={handleClick} size="small" sx={{ ml: 2 }}>
+            <Jazzicon diameter={32} seed={picture} />
           </IconButton>
         </Tooltip>
         <Menu
