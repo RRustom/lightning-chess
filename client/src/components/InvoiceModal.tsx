@@ -26,6 +26,8 @@ const InvoiceModal = (props: Props) => {
   const { gameUuid, opponent } = useGame();
   const { paymentRequest, amount, isPaymentSuccess } = usePayment();
 
+  const showInviteOpponent = gameUuid && !isPaymentSuccess && !opponent.id;
+  console.log('SHOW INVITE OPPONENT: ', showInviteOpponent);
   const inviteOpponent = (
     <>
       <DialogTitle>Challenge your friend</DialogTitle>
@@ -42,6 +44,9 @@ const InvoiceModal = (props: Props) => {
     </>
   );
 
+  const showWaitingForPlayer =
+    gameUuid && !isPaymentSuccess && opponent && !!opponent.id;
+  console.log('SHOW WAITING FOR PLAYER: ', showWaitingForPlayer);
   const waitingForPlayer = (
     <>
       <DialogTitle>Pay to play</DialogTitle>
@@ -57,7 +62,7 @@ const InvoiceModal = (props: Props) => {
           id="paymentRequest"
           variant="outlined"
           multiline
-          rows={5}
+          rows={6}
           defaultValue={paymentRequest}
           autoComplete="off"
           InputProps={{
@@ -70,6 +75,8 @@ const InvoiceModal = (props: Props) => {
     </>
   );
 
+  const showWaitingForOpponent = gameUuid && isPaymentSuccess;
+  console.log('SHOW WAITING FOR OPPONENT: ', showWaitingForOpponent);
   const waitingForOpponent = (
     <>
       <DialogTitle>Pay to play</DialogTitle>
@@ -81,12 +88,10 @@ const InvoiceModal = (props: Props) => {
   );
 
   return (
-    <Dialog open={props.isOpen} keepMounted>
-      {isPaymentSuccess
-        ? waitingForOpponent
-        : opponent && opponent.id
-        ? waitingForPlayer
-        : inviteOpponent}
+    <Dialog open={props.isOpen} keepMounted fullWidth>
+      {showInviteOpponent && inviteOpponent}
+      {showWaitingForPlayer && waitingForPlayer}
+      {showWaitingForOpponent && waitingForOpponent}
     </Dialog>
   );
 };

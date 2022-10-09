@@ -16,12 +16,10 @@ import Logout from '@mui/icons-material/Logout';
 import useAuth from '../context/auth';
 import Jazzicon from 'react-jazzicon';
 import useWalletBalance from '../hooks/useWalletBalance';
-
-// TODO: nicer display for balance
+import Chip from '@mui/material/Chip';
 
 const NavBar = () => {
   const { userName, picture } = useAuth();
-  const { walletBalance } = useWalletBalance();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -39,7 +37,7 @@ const NavBar = () => {
         <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
           Lightning Chess
         </Typography>
-        <Typography component="div">{walletBalance}sats</Typography>
+        <WalletBalance />
         <Typography component="div" sx={{ marginLeft: '8px' }}>
           {userName}
         </Typography>
@@ -111,6 +109,18 @@ const NavBar = () => {
         </Menu>
       </Toolbar>
     </AppBar>
+  );
+};
+
+const WalletBalance = () => {
+  const { walletBalance } = useWalletBalance();
+  return (
+    <Chip
+      size="small"
+      label={`${walletBalance.toLocaleString()} sats`}
+      color="warning"
+      variant="outlined"
+    />
   );
 };
 

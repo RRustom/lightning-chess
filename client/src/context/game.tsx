@@ -26,6 +26,7 @@ export type GameContextType = {
   sendMove: (move: string) => void;
   sendJoinGame: () => void;
   socket: WebSocket | null;
+  receivedPrize: boolean;
 };
 
 const GameContextDefaults = {
@@ -41,6 +42,7 @@ const GameContextDefaults = {
   sendMove: () => null,
   sendJoinGame: () => null,
   socket: null,
+  receivedPrize: false,
 };
 
 export const GameContext = createContext<GameContextType>(GameContextDefaults);
@@ -63,6 +65,7 @@ export const GameProvider = ({ children }: any) => {
   const [validMoves, setValidMoves] = useState<Move[]>([]);
   const [currentTurn, setCurrentTurn] = useState(0);
   const [isMyTurn, setIsMyTurn] = useState(false);
+  const [receivedPrize, setReceivedPrize] = useState(false);
 
   const { socket } = useGameWebSocket(
     currentColor == Color.White
@@ -95,8 +98,8 @@ export const GameProvider = ({ children }: any) => {
   useEffect(() => {
     if (!socket) return;
     socket.onmessage = function (evt) {
-      console.log('RECEIVED WS DATA: ', evt.data);
       const data = JSON.parse(evt.data);
+      console.log('RECEIVED WS DATA: ', data);
 
       // if opponent joined
       if (currentColor !== Color.Black && data.blackId)
@@ -141,7 +144,7 @@ export const GameProvider = ({ children }: any) => {
         (outcome === Outcome.WhiteWon && currentColor === Color.White) ||
         (outcome === Outcome.BlackWon && currentColor === Color.Black);
 
-      if (isWinner) __fetchWinningPayment(gameUuid);
+      if (isWinner) __fetchWinningPayment(gameUuid, setReceivedPrize);
     }
   }, [gameUuid, outcome]);
 
@@ -187,6 +190,7 @@ export const GameProvider = ({ children }: any) => {
       sendMove,
       sendJoinGame,
       socket,
+      receivedPrize,
     }),
     [
       gameUuid,
@@ -201,6 +205,7 @@ export const GameProvider = ({ children }: any) => {
       sendMove,
       sendJoinGame,
       socket,
+      receivedPrize,
     ],
   );
 
@@ -270,10 +275,14 @@ const __fetchOpponentData = async (
   }
 };
 
-const __fetchWinningPayment = async (gameUuid: string) => {
+const __fetchWinningPayment = async (
+  gameUuid: string,
+  setReceivedPrize: any,
+) => {
   try {
     const response = await GameAPI.getWinningInvoice(gameUuid);
     console.log('FETCHED WIN: ', response);
+    setReceivedPrize(true);
   } catch (err) {
     console.log(err);
   }

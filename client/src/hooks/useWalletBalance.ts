@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
 import UserAPI from '../api/user';
 import useAuth from '../context/auth';
+import useGame from '../context/game';
 
 const useWalletBalance = () => {
   const { userName } = useAuth();
-  const [walletBalance, setWalletBalance] = useState();
+  const { receivedPrize } = useGame();
+  const [walletBalance, setWalletBalance] = useState(0);
 
   useEffect(() => {
     if (userName) __fetchWalletBalance(setWalletBalance);
-  }, [userName]);
+  }, [userName, receivedPrize]);
   return { walletBalance };
 };
 

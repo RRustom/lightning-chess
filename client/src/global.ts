@@ -6,6 +6,7 @@ export enum Color {
 export enum Outcome {
   WhiteWon = '1-0',
   BlackWon = '0-1',
+  NoOutcome = '*',
 }
 
 export type User = {

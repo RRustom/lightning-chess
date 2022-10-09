@@ -44,10 +44,6 @@ export default function ChessBoard() {
     }
   }, [outcome]);
 
-  // TODO: don't show board until other player has joined
-  // when other player joins, show modal
-  // when canStartGame, show board and begin game
-
   const makeMove = async (move: string) => {
     try {
       if (!gameUuid) return;

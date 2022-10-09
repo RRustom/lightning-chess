@@ -322,7 +322,7 @@ func PayWinner(c *gin.Context) {
 	}
 
 	client := db.Nodes[nodeId]
-	memo := fmt.Sprintf("%v", gameUuid.String())
+	memo := fmt.Sprintf("Congrats on winning game %v!", gameUuid.String())
 
 	invoice, err := GenerateInvoice(client, 2000, memo)
 	if err != nil {

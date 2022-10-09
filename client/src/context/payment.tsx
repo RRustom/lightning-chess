@@ -13,6 +13,8 @@ import { Color, User, Move } from '../global';
 import useAuth from './auth';
 import useGame from './game';
 
+const AMOUNT = 1000; // in satoshis
+
 export type PaymentContextType = {
   paymentRequest: string;
   amount: number;
@@ -22,7 +24,7 @@ export type PaymentContextType = {
 
 const PaymentContextDefaults = {
   paymentRequest: '',
-  amount: 100,
+  amount: AMOUNT,
   isPaymentSuccess: false,
   canStartGame: false,
 };
@@ -32,101 +34,47 @@ export const PaymentContext = createContext<PaymentContextType>(
 );
 
 export const PaymentProvider = ({ children }: any) => {
-  const { userId, currentColor } = useAuth();
+  const { userId } = useAuth();
   const { gameUuid, opponent, socket } = useGame();
 
-  const [paymentRequest, setPaymentRequest] = useState(
-    'some super long lnd payment request',
-  );
-  const [amount, setAmount] = useState(100); // in satoshis
+  const [paymentRequest, setPaymentRequest] = useState('');
   const [isPaymentSuccess, setIsPaymentSuccess] = useState(false);
   const [canStartGame, setCanStartGame] = useState(false);
 
   useEffect(() => {
     // if opponent joined, fetch invoice
     if (gameUuid && !isPaymentSuccess && opponent && opponent.id) {
-      __fetchStartInvoice(gameUuid);
+      __fetchStartInvoice(gameUuid, setPaymentRequest);
     }
-  }, [opponent, gameUuid]);
-
-  //   const { socket } = useGameWebSocket(
-  //     currentColor == Color.White
-  //       ? gameUuid
-  //       : opponent && opponent.id && gameUuid
-  //       ? gameUuid
-  //       : undefined,
-  //   );
-
-  // Initialize the game
-  //   useEffect(() => {
-  //     if (gameUuid)
-  //       __fetchGameData(
-  //         gameUuid,
-  //         setPositions,
-  //         setPgn,
-  //         currentColor,
-  //         setOpponent,
-  //         setMoves,
-  //       );
-  //   }, [gameUuid]);
-
-  // Fetch opponent data
-  //   useEffect(() => {
-  //     if (gameUuid && opponent.id)
-  //       __fetchOpponentData(gameUuid, opponent.id, setOpponent);
-  //   }, [gameUuid, opponent.id]);
+  }, [opponent.id, gameUuid]);
 
   // Listen to updates to the board position
   useEffect(() => {
     if (!socket) return;
-    socket.onmessage = function (evt) {
+    socket.addEventListener('message', function (evt) {
       const data = JSON.parse(evt.data);
       console.log('RECEIVED WS DATA: ', data);
 
-      // // if opponent joined
-      // if (currentColor !== Color.Black && data.blackId)
-      //   setOpponent((x) => ({ ...x, id: data.blackId }));
+      // this player completed their payment successfully
+      if (data.playerId == userId) {
+        console.log(`playerId ${data.playerId} = userId ${userId}`);
+        setIsPaymentSuccess(true);
+      }
 
-      // // if new position
-      // if (data.fen) {
-      //   console.log('UPDATED FEN: ', data.fen);
-      //   setCurrentFEN(data.fen);
-      // }
-
-      // // if new outcome
-      // if (data.outcome) {
-      //   setOutcome(data.outcome);
-      // }
-
-      // // update turn number
-      // if (data.numTurn) {
-      //   setCurrentTurn(data.numTurn);
-      // }
-    };
+      // the other player also completed their payment
+      console.log('canStartGame: ', data.canStartGame);
+      if (data.canStartGame) setCanStartGame(true);
+    });
   }, [socket]);
-
-  //   // update when it's my turn
-  //   useEffect(() => {
-  //     if (currentColor === Color.White) setIsMyTurn(currentTurn % 2 == 0);
-  //     if (currentColor === Color.Black) setIsMyTurn(currentTurn % 2 == 1);
-  //   }, [currentTurn]);
-
-  //   // fetch valid moves when it's my turn
-  //   useEffect(() => {
-  //     console.log('IS MY TURN: ', isMyTurn);
-  //     if (gameUuid && isMyTurn) {
-  //       __fetchValidMoves(gameUuid, userId, setValidMoves);
-  //     }
-  //   }, [gameUuid, isMyTurn]);
 
   const memoedValue = useMemo(
     () => ({
       paymentRequest,
-      amount,
+      amount: AMOUNT,
       isPaymentSuccess,
       canStartGame,
     }),
-    [paymentRequest, amount, isPaymentSuccess, canStartGame],
+    [paymentRequest, isPaymentSuccess, canStartGame],
   );
 
   return (
@@ -136,49 +84,15 @@ export const PaymentProvider = ({ children }: any) => {
   );
 };
 
-// const __fetchValidMoves = async (
-//   gameUuid: string,
-//   playerId: number,
-//   setValidMoves: (x: any) => void,
-// ) => {
-//   try {
-//     if (!gameUuid) return;
-//     const response = await GameAPI.getValidMoves(gameUuid);
-//     console.log('VALID MOVES: ', response.data.moves);
-//     setValidMoves(response.data.moves.map((x: string) => formatMove(x)));
-//   } catch (err) {
-//     console.log(err);
-//   }
-// };
-
-// const __fetchGameData = async (
-//   gameUuid: string,
-//   setPositions: any,
-//   setPgn: any,
-//   currentColor: Color,
-//   setOpponent: any,
-//   setMoves: any,
-// ) => {
-//   try {
-//     const response = await GameAPI.getGameByUuid(gameUuid);
-//     console.log('FETCHED GAME: ', response.data);
-//     setPositions(response.data.positions);
-//     // setPgn(response.data.pgn);
-//     // setMoves(parseGame(response.data.pgn).moves);
-//     if (currentColor === Color.Black) {
-//       setOpponent((x: User) => ({ ...x, id: response.data.whiteId }));
-//     } else {
-//       setOpponent((x: User) => ({ ...x, id: response.data.blackId }));
-//     }
-//   } catch (err) {
-//     console.log(err);
-//   }
-// };
-
-const __fetchStartInvoice = async (gameUuid: string) => {
+const __fetchStartInvoice = async (
+  gameUuid: string,
+  setPaymentRequest: any,
+) => {
   try {
+    console.log('FETCHING START INVOICE');
     const response = await GameAPI.getStartInvoice(gameUuid);
-    console.log('INVOICE: ', response.data);
+    console.log('START INVOICE: ', response.data);
+    setPaymentRequest(response.data.paymentRequest);
   } catch (err) {
     console.log(err);
   }

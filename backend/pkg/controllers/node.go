@@ -105,12 +105,6 @@ func ConnectToNode(c *gin.Context) {
 		nodeId = getInfoResponse.IdentityPubkey
 		fmt.Println("nodeId: ", nodeId)
 
-		channelBalanceResponse, err := client.LndClient.ChannelBalance(client.Ctx, &lnrpc.ChannelBalanceRequest{})
-		if err != nil {
-			fmt.Println("ERROR: ", err)
-		}
-		fmt.Printf("BALANCE : %+v\n", channelBalanceResponse)
-
 		db.Nodes[nodeId] = client
 
 		// if new user, create user
@@ -132,7 +126,6 @@ func ConnectToNode(c *gin.Context) {
 		// retrieve client
 		nodeId = session.NodeId
 		client = db.Nodes[nodeId]
-		fmt.Printf("EXISTING CLIENT: %+v\n", client)
 		userId, _ = db.GetUserByNodeID(nodeId)
 	}
 
@@ -191,16 +184,14 @@ func GetWalletBalance(c *gin.Context) {
 
 	node, _ := db.Nodes[session.NodeId]
 
-	fmt.Printf("NODE: %+v\n", node)
-
-	channelBalanceResponse, err := node.LndClient.ChannelBalance(node.Ctx, &lnrpc.ChannelBalanceRequest{})
+	walletBalanceResponse, err := node.LndClient.ChannelBalance(node.Ctx, &lnrpc.ChannelBalanceRequest{})
 	if err != nil {
 		fmt.Println("ERROR: ", err)
 	}
 
-	fmt.Printf("BALANCE : %+v\n", channelBalanceResponse)
+	fmt.Printf("BALANCE : %+v\n", walletBalanceResponse)
 
-	c.IndentedJSON(http.StatusOK, channelBalanceResponse)
+	c.IndentedJSON(http.StatusOK, walletBalanceResponse)
 	return
 }
 

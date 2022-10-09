@@ -3,6 +3,7 @@ import useGame from '../context/game';
 import useAuth from '../context/auth';
 import ConnectForm from '../components/ConnectForm';
 import Button from '@mui/material/Button';
+import Typography from '@mui/material/Typography';
 
 type Props = {
   onAccept: () => void;
@@ -38,7 +39,9 @@ const JoinPage = (props: Props) => {
         height: '100%',
       }}
     >
-      <div>{opponent.userName} has invited you to join a game</div>
+      <Typography variant="h6" sx={{ marginBottom: '8px' }}>
+        {opponent.userName} has invited you to join a game
+      </Typography>
       <Button variant="contained" onClick={onClick}>
         Join Game
       </Button>
