@@ -33,7 +33,7 @@ export const PaymentContext = createContext<PaymentContextType>(
 
 export const PaymentProvider = ({ children }: any) => {
   const { userId, currentColor } = useAuth();
-  const { gameUuid } = useGame();
+  const { gameUuid, opponent, socket } = useGame();
 
   const [paymentRequest, setPaymentRequest] = useState(
     'some super long lnd payment request',
@@ -41,6 +41,13 @@ export const PaymentProvider = ({ children }: any) => {
   const [amount, setAmount] = useState(100); // in satoshis
   const [isPaymentSuccess, setIsPaymentSuccess] = useState(false);
   const [canStartGame, setCanStartGame] = useState(false);
+
+  useEffect(() => {
+    // if opponent joined, fetch invoice
+    if (gameUuid && !isPaymentSuccess && opponent && opponent.id) {
+      __fetchStartInvoice(gameUuid);
+    }
+  }, [opponent, gameUuid]);
 
   //   const { socket } = useGameWebSocket(
   //     currentColor == Color.White
@@ -70,33 +77,33 @@ export const PaymentProvider = ({ children }: any) => {
   //   }, [gameUuid, opponent.id]);
 
   // Listen to updates to the board position
-  //   useEffect(() => {
-  //     if (!socket) return;
-  //     socket.onmessage = function (evt) {
-  //       console.log('RECEIVED WS DATA: ', evt.data);
-  //       const data = JSON.parse(evt.data);
+  useEffect(() => {
+    if (!socket) return;
+    socket.onmessage = function (evt) {
+      const data = JSON.parse(evt.data);
+      console.log('RECEIVED WS DATA: ', data);
 
-  //       // if opponent joined
-  //       if (currentColor !== Color.Black && data.blackId)
-  //         setOpponent((x) => ({ ...x, id: data.blackId }));
+      // // if opponent joined
+      // if (currentColor !== Color.Black && data.blackId)
+      //   setOpponent((x) => ({ ...x, id: data.blackId }));
 
-  //       // if new position
-  //       if (data.fen) {
-  //         console.log('UPDATED FEN: ', data.fen);
-  //         setCurrentFEN(data.fen);
-  //       }
+      // // if new position
+      // if (data.fen) {
+      //   console.log('UPDATED FEN: ', data.fen);
+      //   setCurrentFEN(data.fen);
+      // }
 
-  //       // if new outcome
-  //       if (data.outcome) {
-  //         setOutcome(data.outcome);
-  //       }
+      // // if new outcome
+      // if (data.outcome) {
+      //   setOutcome(data.outcome);
+      // }
 
-  //       // update turn number
-  //       if (data.numTurn) {
-  //         setCurrentTurn(data.numTurn);
-  //       }
-  //     };
-  //   }, [socket]);
+      // // update turn number
+      // if (data.numTurn) {
+      //   setCurrentTurn(data.numTurn);
+      // }
+    };
+  }, [socket]);
 
   //   // update when it's my turn
   //   useEffect(() => {
@@ -167,6 +174,15 @@ export const PaymentProvider = ({ children }: any) => {
 //     console.log(err);
 //   }
 // };
+
+const __fetchStartInvoice = async (gameUuid: string) => {
+  try {
+    const response = await GameAPI.getStartInvoice(gameUuid);
+    console.log('INVOICE: ', response.data);
+  } catch (err) {
+    console.log(err);
+  }
+};
 
 export default function usePayment() {
   return useContext(PaymentContext);

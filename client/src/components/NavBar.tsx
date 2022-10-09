@@ -39,8 +39,10 @@ const NavBar = () => {
         <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
           Lightning Chess
         </Typography>
-        <Typography component="div">{walletBalance}</Typography>
-        <Typography component="div">{userName}</Typography>
+        <Typography component="div">{walletBalance}sats</Typography>
+        <Typography component="div" sx={{ marginLeft: '8px' }}>
+          {userName}
+        </Typography>
         <Tooltip title="Account settings">
           <IconButton onClick={handleClick} size="small" sx={{ ml: 2 }}>
             <Jazzicon diameter={32} seed={picture} />

@@ -9,6 +9,14 @@ class GameAPI {
     return axios.get(`/api/game/moves/${uuid}`);
   }
 
+  static async getStartInvoice(uuid: string) {
+    return axios.get(`/api/game/startInvoice/${uuid}`);
+  }
+
+  static async getWinningInvoice(uuid: string) {
+    return axios.get(`/api/game/winingInvoice/${uuid}`);
+  }
+
   static async joinGame(uuid: string, blackId: number) {
     return axios.post(`/api/game/join`, { uuid, blackId });
   }

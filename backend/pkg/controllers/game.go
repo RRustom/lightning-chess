@@ -41,6 +41,11 @@ type ValidMovesData struct {
 	Moves []string `json:"moves"`
 }
 
+type GameWonData struct {
+	Preimage string     `json:"preimage"`
+	Invoice  db.Invoice `json:"invoice"`
+}
+
 func getGamePositionData(g db.Game, game *chess.Game) GamePositionData {
 	// game := g.getGameLatestPosition()
 	fen := game.Position().String()
@@ -78,7 +83,10 @@ func PostNewGame(c *gin.Context) {
 	}
 	db.Games[newGame.Uuid] = newGame
 
-	// TODO: initialize game payments
+	newGamePayment := db.GamePayment{
+		GameUuid: newGame.Uuid,
+	}
+	db.GamePayments[newGame.Uuid] = newGamePayment
 
 	c.String(http.StatusCreated, newGame.Uuid.String())
 }
@@ -110,9 +118,7 @@ func GetValidMoves(c *gin.Context) {
 	}
 
 	game := g.GetLatestPosition()
-	fmt.Println("GAME: ", game)
 	validMoves := game.ValidMoves()
-	fmt.Println("validMoves: ", validMoves)
 
 	var movesUCI []string
 
@@ -185,15 +191,11 @@ func MakeMove(data MoveData) ([]byte, error) {
 	// playerId, _ := strconv.Atoi(c.Param("playerId"))
 	// move := c.Param("move")
 
-	fmt.Printf("player %d wants to move %s \n", data.PlayerId, data.Move)
-
 	g, exists := db.Games[uuid]
 	if !exists {
 		// c.IndentedJSON(http.StatusNotFound, gin.H{"message": "game not found"})
 		return []byte{}, errors.New("game not found")
 	}
-
-	fmt.Printf("Found game: %+v\n", g)
 
 	_, userExists := db.Users[data.PlayerId]
 	if !userExists {
@@ -230,63 +232,108 @@ func MakeMove(data MoveData) ([]byte, error) {
 	g.Positions = append(g.Positions, fen)
 	db.Games[uuid] = g
 
-	fmt.Println("game after move: ", game)
-	// fmt.Println("PGN of game after move: ", fmt.Sprint(game))
-
-	// TODO: broadcast to both listeners the new position data, and the next set of possible moves?
-	// c.Status(http.StatusNoContent)
-
 	positionData := getGamePositionData(g, game)
-	fmt.Printf("Position data: %+v\n", positionData)
 
 	u, err := json.Marshal(positionData)
 	if err != nil {
 		panic(err)
 	}
 
-	// var outputData bytes.Buffer        // Stand-in for a network connection
-	// enc := gob.NewEncoder(&outputData) // Will write to network.
-	// // dec := gob.NewDecoder(&network) // Will read from network.
-	// // Encode (send) the value.
-	// err = enc.Encode(positionData)
-	// if err != nil {
-	// 	log.Fatal("encode error:", err)
-	// }
-
-	// c.IndentedJSON(http.StatusOK, positionData)
 	return u, nil
 }
 
 // GET invoice to start the game
-func GetStartInvoice(playerId int, gameUuid uuid.UUID) ([]byte, error) {
+func GetStartInvoice(c *gin.Context) {
+	uuidString := c.Param("uuid")
+	gameUuid, _ := uuid.Parse(uuidString)
+
+	game, exists := db.Games[gameUuid]
+
+	if !exists {
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "game not found"})
+		return
+	}
+
+	// read session token from cookie
+	token, _ := c.Cookie("ln_chess_auth")
+
+	// fetch session by token
+	session, _ := db.Sessions[token]
+
+	nodeId := session.NodeId
+	userId, _ := db.GetUserByNodeID(nodeId)
+
 	client := db.LNDBackend
-	memo := fmt.Sprintf("%v", gameUuid.String())
+	memo := fmt.Sprintf("%v", uuidString)
 
 	invoice, err := GenerateInvoice(client, 1000, memo)
+	if err != nil {
+		fmt.Println("error generating invoice: ", err)
+	}
 
-	// TODO: update game payments
+	// update GamePayment invoice
+	gp := db.GamePayments[gameUuid]
+	if userId == game.WhiteId {
+		gp.WhiteInvoice = invoice
+	} else {
+		gp.BlackInvoice = invoice
+	}
+	db.GamePayments[gameUuid] = gp
 
-	u, _ := json.Marshal(invoice)
-	return u, err
+	c.IndentedJSON(http.StatusOK, invoice)
+	return
 }
 
-func PayWinner(winnerId int, gameUuid uuid.UUID) ([]byte, error) {
-	// called by MakeMove to generate a send invoice from LND backend to winner
+func PayWinner(c *gin.Context) {
+	uuidString := c.Param("uuid")
+	gameUuid, _ := uuid.Parse(uuidString)
 
-	// find the user's node
-	var nodeId string
-	for userId, nId := range db.UserNodes {
-		if userId == winnerId {
-			nodeId = nId
-			break
+	g, exists := db.Games[gameUuid]
+
+	if !exists {
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "game not found"})
+		return
+	}
+
+	// fetch userId from cookie
+	token, _ := c.Cookie("ln_chess_auth")
+	session, _ := db.Sessions[token]
+	nodeId := session.NodeId
+	userId, _ := db.GetUserByNodeID(nodeId)
+
+	// get winnerId
+	game := g.GetLatestPosition()
+	outcome := game.Outcome()
+	var winnerId int
+	if outcome != chess.NoOutcome {
+		if outcome == chess.WhiteWon {
+			winnerId = g.WhiteId
+		} else if outcome == chess.BlackWon {
+			winnerId = g.BlackId
 		}
+	} else {
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "game is not over"})
+		return
+	}
+
+	if winnerId != userId {
+		c.IndentedJSON(http.StatusForbidden, gin.H{"message": "you are not the winner"})
+		return
 	}
 
 	client := db.Nodes[nodeId]
 	memo := fmt.Sprintf("%v", gameUuid.String())
 
 	invoice, err := GenerateInvoice(client, 2000, memo)
+	if err != nil {
+		fmt.Println("error generating invoice: ", err)
+	}
 
-	u, _ := json.Marshal(invoice)
-	return u, err
+	preimage, err := Pay(db.LNDBackend, invoice.PaymentRequest)
+	if err != nil {
+		fmt.Println("error paying winner: ", err)
+	}
+
+	c.IndentedJSON(http.StatusOK, GameWonData{Preimage: preimage, Invoice: invoice})
+	return
 }

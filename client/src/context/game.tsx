@@ -9,7 +9,7 @@ import { parseGame } from '@mliebelt/pgn-parser';
 import GameAPI from '../api/game';
 import UserAPI from '../api/user';
 import useGameWebSocket from '../hooks/useGameWebSocket';
-import { Color, User, Move } from '../global';
+import { Color, User, Move, Outcome } from '../global';
 import useAuth from './auth';
 import { useParams } from 'react-router-dom';
 
@@ -25,6 +25,7 @@ export type GameContextType = {
   isMyTurn: boolean;
   sendMove: (move: string) => void;
   sendJoinGame: () => void;
+  socket: WebSocket | null;
 };
 
 const GameContextDefaults = {
@@ -39,6 +40,7 @@ const GameContextDefaults = {
   isMyTurn: false,
   sendMove: () => null,
   sendJoinGame: () => null,
+  socket: null,
 };
 
 export const GameContext = createContext<GameContextType>(GameContextDefaults);
@@ -132,6 +134,17 @@ export const GameProvider = ({ children }: any) => {
     }
   }, [gameUuid, isMyTurn]);
 
+  // get paid when won
+  useEffect(() => {
+    if (gameUuid) {
+      const isWinner =
+        (outcome === Outcome.WhiteWon && currentColor === Color.White) ||
+        (outcome === Outcome.BlackWon && currentColor === Color.Black);
+
+      if (isWinner) __fetchWinningPayment(gameUuid);
+    }
+  }, [gameUuid, outcome]);
+
   const sendMove = (move: string) => {
     if (!socket) return;
     socket.send(
@@ -173,6 +186,7 @@ export const GameProvider = ({ children }: any) => {
       isMyTurn,
       sendMove,
       sendJoinGame,
+      socket,
     }),
     [
       gameUuid,
@@ -186,6 +200,7 @@ export const GameProvider = ({ children }: any) => {
       isMyTurn,
       sendMove,
       sendJoinGame,
+      socket,
     ],
   );
 
@@ -250,6 +265,15 @@ const __fetchOpponentData = async (
       userName: response.data.userName,
       picture: response.data.picture,
     });
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+const __fetchWinningPayment = async (gameUuid: string) => {
+  try {
+    const response = await GameAPI.getWinningInvoice(gameUuid);
+    console.log('FETCHED WIN: ', response);
   } catch (err) {
     console.log(err);
   }

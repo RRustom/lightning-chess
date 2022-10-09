@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -101,7 +102,7 @@ func ConnectToNode(c *gin.Context) {
 		fmt.Printf("NEW CLIENT: %+v\n", client)
 
 		getInfoResponse, _ := client.LndClient.GetInfo(client.Ctx, &lnrpc.GetInfoRequest{})
-		nodeId = getInfoResponse.LightningId
+		nodeId = getInfoResponse.IdentityPubkey
 		fmt.Println("nodeId: ", nodeId)
 
 		channelBalanceResponse, err := client.LndClient.ChannelBalance(client.Ctx, &lnrpc.ChannelBalanceRequest{})
@@ -115,7 +116,7 @@ func ConnectToNode(c *gin.Context) {
 		// if new user, create user
 		userId, err = db.GetUserByNodeID(nodeId)
 		if err != nil {
-			userId = db.CreateNewUser(getInfoResponse.IdentityAddress)
+			userId = db.CreateNewUser(getInfoResponse.Alias)
 		}
 
 		// update the user's node
@@ -295,4 +296,34 @@ func GenerateInvoice(client db.LNDClient, amount int64, memo string) (db.Invoice
 	result.PaymentHash = result.ImplDepID
 	result.PaymentRequest = res.PaymentRequest
 	return result, nil
+}
+
+// Pay pays the invoice and returns the preimage (hex encoded) on success, or an error on failure.
+func Pay(client db.LNDClient, invoice string) (string, error) {
+	// Decode payment request (a.k.a. invoice).
+	payReqString := lnrpc.PayReqString{
+		PayReq: invoice,
+	}
+	decodedPayReq, err := client.LndClient.DecodePayReq(client.Ctx, &payReqString)
+	if err != nil {
+		return "", err
+	}
+
+	// Send payment
+	sendReq := lnrpc.SendRequest{
+		PaymentRequest: invoice,
+	}
+	fmt.Printf("Sending payment with %v Satoshis to %v (memo: \"%v\")",
+		decodedPayReq.NumSatoshis, decodedPayReq.Destination, decodedPayReq.Description)
+	sendRes, err := client.LndClient.SendPaymentSync(client.Ctx, &sendReq)
+	if err != nil {
+		return "", err
+	}
+	// Even if err is nil, this just means the RPC call was successful, not the payment was successful
+	if sendRes.PaymentError != "" {
+		return "", errors.New(sendRes.PaymentError)
+	}
+
+	hexPreimage := hex.EncodeToString(sendRes.PaymentPreimage)
+	return string(hexPreimage), nil
 }

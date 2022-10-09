@@ -55,6 +55,10 @@ func engine() *gin.Engine {
 
 		router.GET("/api/user/balance", controllers.GetWalletBalance)
 
+		router.GET("/api/game/winingInvoice/:uuid", controllers.PayWinner)
+
+		router.GET("/api/game/startInvoice/:uuid", controllers.GetStartInvoice)
+
 		router.GET("/api/game/moves/:uuid", controllers.GetValidMoves)
 
 		// router.POST("/api/game/join", controllers.PostJoinGame)
