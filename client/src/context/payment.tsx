@@ -1,15 +1,5 @@
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  useMemo,
-} from 'react';
-import { parseGame } from '@mliebelt/pgn-parser';
+import { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import GameAPI from '../api/game';
-import UserAPI from '../api/user';
-import useGameWebSocket from '../hooks/useGameWebSocket';
-import { Color, User, Move } from '../global';
 import useAuth from './auth';
 import useGame from './game';
 
@@ -53,16 +43,13 @@ export const PaymentProvider = ({ children }: any) => {
     if (!socket) return;
     socket.addEventListener('message', function (evt) {
       const data = JSON.parse(evt.data);
-      console.log('RECEIVED WS DATA: ', data);
 
       // this player completed their payment successfully
       if (data.playerId == userId) {
-        console.log(`playerId ${data.playerId} = userId ${userId}`);
         setIsPaymentSuccess(true);
       }
 
       // the other player also completed their payment
-      console.log('canStartGame: ', data.canStartGame);
       if (data.canStartGame) setCanStartGame(true);
     });
   }, [socket]);
@@ -89,9 +76,7 @@ const __fetchStartInvoice = async (
   setPaymentRequest: any,
 ) => {
   try {
-    console.log('FETCHING START INVOICE');
     const response = await GameAPI.getStartInvoice(gameUuid);
-    console.log('START INVOICE: ', response.data);
     setPaymentRequest(response.data.paymentRequest);
   } catch (err) {
     console.log(err);

@@ -10,24 +10,15 @@ import usePayment from '../context/payment';
 import GameInfo from './GameInfo';
 
 export default function ChessBoard() {
-  const { userId, currentColor } = useAuth();
+  const { currentColor } = useAuth();
   const [moveFrom, setMoveFrom] = useState('');
-  const [rightClickedSquares, setRightClickedSquares] = useState({});
-  const [moveSquares, setMoveSquares] = useState({});
   const [optionSquares, setOptionSquares] = useState({});
   const [showConfetti, setShowConfetti] = useState(false);
   const size = useWindowSize();
 
-  const {
-    gameUuid,
-    validMoves,
-    opponent,
-    sendMove,
-    currentFEN,
-    isMyTurn,
-    outcome,
-  } = useGame();
-  const { isPaymentSuccess, canStartGame } = usePayment();
+  const { gameUuid, validMoves, opponent, sendMove, currentFEN, outcome } =
+    useGame();
+  const { canStartGame } = usePayment();
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(true);
 
   useEffect(() => {
@@ -49,23 +40,15 @@ export default function ChessBoard() {
       if (!gameUuid) return;
 
       sendMove(move);
-      // const response = await GameAPI.move(gameUuid, playerId, move);
-      // console.log('UPDATED FEN: ', response.data.fen)
-      // setCurrentFEN(response.data.fen)
-      // setValidMoves(response.data.moves.map((x: string) => parseUCI(x)))
     } catch (err) {
       console.log(err);
     }
   };
 
-  function getMoveOptions(square: string) {
+  const getMoveOptions = (square: string) => {
     if (validMoves.length === 0) {
       return;
     }
-
-    // console.log('Computing move options for: ', square);
-    // console.log('Valid moves: ', validMoves);
-
     const validMovesForSquare = validMoves.filter((x) => x.from === square);
 
     const newSquares = {} as any;
@@ -86,25 +69,16 @@ export default function ChessBoard() {
       background: 'rgba(255, 255, 0, 0.4)',
     };
     setOptionSquares(newSquares);
-  }
+  };
 
-  async function onSquareClick(square: string) {
-    setRightClickedSquares({});
-
-    console.log('SQUARE: ', square);
-    console.log('moveFrom: ', moveFrom);
-
+  const onSquareClick = async (square: string) => {
     function resetFirstMove(square: string) {
       setMoveFrom(square);
       getMoveOptions(square);
     }
 
-    console.log('OPTION SQUARES: ', optionSquares);
-
     // if square was NOT an option, then reset options
     const move = moveToUCI(moveFrom, square);
-    console.log('move: ', move);
-    console.log('is valid move: ', isValidMove(move, validMoves));
 
     if (!isValidMove(move, validMoves)) {
       resetFirstMove(square);
@@ -114,37 +88,15 @@ export default function ChessBoard() {
       setMoveFrom('');
       setOptionSquares({});
     }
-  }
-
-  function onPieceClick(piece: any) {
-    console.log('PIECE: ', piece);
-  }
+  };
 
   function onDrop(sourceSquare: string, targetSquare: string) {
-    // const move = makeAMove({
-    //     from: sourceSquare,
-    //     to: targetSquare,
-    //     promotion: 'q' // always promote to a queen for example simplicity
-    // });
-
-    console.log('Source: ', sourceSquare, ' Target: ', targetSquare);
-
-    // illegal move
-    // if (move === null) return false;
-
-    // setTimeout(makeRandomMove, 200);
     return true;
   }
 
-  // onSquareRightClick={onSquareRightClick}
-
   const customSquareStyles = {
-    ...moveSquares,
     ...optionSquares,
-    //...rightClickedSquares
   };
-
-  console.log('OPPONENT: ', opponent);
 
   return (
     <div
@@ -153,7 +105,6 @@ export default function ChessBoard() {
         flexFlow: 'column nowrap',
         alignItems: 'center',
         height: '100%',
-        // justifyContent: 'center',
       }}
     >
       <Confetti
@@ -176,7 +127,6 @@ export default function ChessBoard() {
         }}
         boardOrientation={currentColor}
         onSquareClick={onSquareClick}
-        onPieceClick={onPieceClick}
         customSquareStyles={customSquareStyles}
       />
       <InvoiceModal isOpen={isInvoiceModalOpen} />

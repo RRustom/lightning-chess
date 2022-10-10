@@ -1,8 +1,6 @@
 package main
 
 import (
-	// "github.com/RRustom/lightning-chess/pkg/controllers"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -35,7 +33,6 @@ func authRequired(c *gin.Context) {
 
 func engine() *gin.Engine {
 	router := gin.New()
-	// router := gin.Default()
 
 	// Login and logout routes
 	router.POST("/api/auth/connect", controllers.ConnectToNode)
@@ -54,24 +51,16 @@ func engine() *gin.Engine {
 		})
 
 		router.GET("/api/user/balance", controllers.GetWalletBalance)
-
 		router.GET("/api/game/winingInvoice/:uuid", controllers.PayWinner)
-
 		router.GET("/api/game/startInvoice/:uuid", controllers.GetStartInvoice)
-
 		router.GET("/api/game/moves/:uuid", controllers.GetValidMoves)
-
-		// router.POST("/api/game/join", controllers.PostJoinGame)
-		// router.POST("/api/game/move", controllers.PostMove)
 		router.POST("/api/game/new", controllers.PostNewGame)
-
 	}
 	return router
 }
 
 // serveWs handles websocket requests from the peer.
 func serveWs(w http.ResponseWriter, r *http.Request, gameUuid string) {
-	fmt.Println("Connection to gameUuid: ", gameUuid)
 	ws, err := websocket.Upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err.Error())

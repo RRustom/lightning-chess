@@ -2,7 +2,6 @@ package db
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -10,8 +9,7 @@ import (
 )
 
 type Game struct {
-	Uuid uuid.UUID `json:"uuid"`
-	// Pgn       string    `json:"pgn"`     // PGN format for the whole game, with metadata
+	Uuid      uuid.UUID `json:"uuid"`
 	WhiteId   int       `json:"whiteId"` // white player ID
 	BlackId   int       `json:"blackId"` // black player ID
 	Positions []string  `json:"moves"`
@@ -35,20 +33,10 @@ var Games = make(map[uuid.UUID]Game)
 var GamePayments = make(map[uuid.UUID]GamePayment)
 
 func (g *Game) GetLatestPosition() *chess.Game {
-	// pgnReader := strings.NewReader(g.Pgn)
-	// fmt.Println("READING g.PGN: ", g.Pgn)
-	// pgn, err := chess.PGN(pgnReader)
-
-	// fmt.Println("FINISHED READING PGN FROM GAME: ", )
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-
 	lp := g.Positions[len(g.Positions)-1]
-	fmt.Println("Latest position: ", lp)
 
 	fen, _ := chess.FEN(lp)
-	return chess.NewGame(chess.UseNotation(chess.UCINotation{}), fen) //  chess.UseNotation(chess.AlgebraicNotation{}) chess.UseNotation(chess.UCINotation{})
+	return chess.NewGame(chess.UseNotation(chess.UCINotation{}), fen)
 }
 
 func (g *Game) IsPlayerIdTurn(playerId int) (bool, error) {

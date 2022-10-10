@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 
 	"github.com/RRustom/lightning-chess/pkg/db"
 	"github.com/RRustom/lightning-chess/pkg/websocket"
@@ -32,7 +31,7 @@ func ListenForPayments(connections websocket.Hub) {
 			break
 		}
 		if err != nil {
-			log.Fatalf("%v.ListFeatures(_) = _, %v", client, err)
+			fmt.Println("ERROR reading invoice: ", err)
 		}
 
 		uuidString := invoice.GetMemo()
@@ -42,7 +41,6 @@ func ListenForPayments(connections websocket.Hub) {
 		invoiceId := hex.EncodeToString(invoice.RHash)
 
 		if invoiceState == lnrpc.Invoice_SETTLED {
-			fmt.Println("INVOICE WAS SETTLED: ", invoice)
 			// update GamePayment invoice
 			var playerId int
 			canStartGame := false

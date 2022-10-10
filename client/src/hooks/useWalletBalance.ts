@@ -17,7 +17,6 @@ const useWalletBalance = () => {
 const __fetchWalletBalance = async (setWalletBalance: any) => {
   try {
     const response = await UserAPI.getWalletBalance();
-    console.log('FETCHED BALANCE: ', response);
     setWalletBalance(response.data.balance);
   } catch (err) {
     console.log(err);

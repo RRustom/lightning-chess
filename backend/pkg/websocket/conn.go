@@ -1,7 +1,6 @@
 package websocket
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -66,8 +65,6 @@ func (s Subscription) ReadPump() {
 	c.Ws.SetPongHandler(func(string) error { c.Ws.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
 
-		// outputData, err := f(c.Ws)
-
 		var message IncomingMessage
 
 		if err := c.Ws.ReadJSON(&message); err != nil {
@@ -76,8 +73,6 @@ func (s Subscription) ReadPump() {
 			}
 			break
 		}
-
-		fmt.Printf("RECEIVED WS MESSAGE: %+v\n", message)
 
 		m := Message{Room: s.Room}
 		var outputData []byte
@@ -91,7 +86,6 @@ func (s Subscription) ReadPump() {
 		}
 		m.Data = outputData
 
-		// _, msg, err := c.Ws.ReadMessage()
 		if err != nil {
 			log.Printf("error: %v\n", err)
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {

@@ -1,21 +1,14 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
 import { HiLink } from 'react-icons/hi';
 import { useParams } from 'react-router-dom';
 import TextField from '@mui/material/TextField';
-import { display } from '@mui/system';
 import IconButton from '@mui/material/IconButton';
 import DoneIcon from '@mui/icons-material/Done';
 
 const InviteButton = () => {
   const { uuid } = useParams();
-  //   const rootPath =
-  //     process.env.NODE_ENV === 'production'
-  //       ? process.env.REACT_APP_PROD_SERVER
-  //       : process.env.REACT_APP_DEV_CLIENT;
-
   const copiedLink = 'localhost:3000' + '/' + uuid;
-  const displayLink = copiedLink.slice(80) + '...';
 
   return (
     <div

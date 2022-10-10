@@ -1,22 +1,14 @@
-import { useState } from 'react';
-import Button from '@mui/material/Button';
+import React from 'react';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { useNavigate } from 'react-router-dom';
 import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
-import AuthAPI from '../api/auth';
-import useAuth from '../context/auth';
 import CircularProgress from '@mui/material/CircularProgress';
 import useGame from '../context/game';
 import usePayment from '../context/payment';
 import InviteButton from './InviteButton';
-
-import IconButton from '@mui/material/IconButton';
-import CloseIcon from '@mui/icons-material/Close';
 
 type Props = {
   isOpen: boolean;
@@ -27,7 +19,6 @@ const InvoiceModal = (props: Props) => {
   const { paymentRequest, amount, isPaymentSuccess } = usePayment();
 
   const showInviteOpponent = gameUuid && !isPaymentSuccess && !opponent.id;
-  console.log('SHOW INVITE OPPONENT: ', showInviteOpponent);
   const inviteOpponent = (
     <>
       <DialogTitle>Challenge your friend</DialogTitle>
@@ -46,7 +37,6 @@ const InvoiceModal = (props: Props) => {
 
   const showWaitingForPlayer =
     gameUuid && !isPaymentSuccess && opponent && !!opponent.id;
-  console.log('SHOW WAITING FOR PLAYER: ', showWaitingForPlayer);
   const waitingForPlayer = (
     <>
       <DialogTitle>Pay to play</DialogTitle>
@@ -76,7 +66,6 @@ const InvoiceModal = (props: Props) => {
   );
 
   const showWaitingForOpponent = gameUuid && isPaymentSuccess;
-  console.log('SHOW WAITING FOR OPPONENT: ', showWaitingForOpponent);
   const waitingForOpponent = (
     <>
       <DialogTitle>Pay to play</DialogTitle>

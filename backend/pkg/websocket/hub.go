@@ -44,7 +44,6 @@ func (h *Hub) Run() {
 
 			}
 			h.Rooms[s.Room][s.Conn] = true
-			// fmt.Printf("Rooms: %+v", h.Rooms)
 		case s := <-h.Unregister:
 			connections := h.Rooms[s.Room]
 			if connections != nil {

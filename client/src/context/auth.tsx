@@ -1,10 +1,4 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useMemo,
-  useEffect,
-} from 'react';
+import { createContext, useContext, useState, useMemo, useEffect } from 'react';
 import AuthAPI from '../api/auth';
 import { Color } from '../global';
 
@@ -41,7 +35,6 @@ export const AuthProvider = ({ children }: any) => {
     const __authenticate = async () => {
       try {
         const response = await AuthAPI.authenticate();
-        console.log('RESPONSE: ', response.data);
         if (response.data) {
           if (response.data.nodeId) setNodeId(response.data.nodeId);
           if (response.data.user.userName)
@@ -64,17 +57,12 @@ export const AuthProvider = ({ children }: any) => {
     macaroon: string,
   ) => {
     try {
-      // if (!gameUuid) return;
       const response = await AuthAPI.connectNode(host, cert, macaroon);
-      console.log('RESPONSE: ', response);
       if (response.data) {
         setNodeId(response.data.nodeId);
         setUserName(response.data.user.userName);
         setUserId(response.data.user.id);
         setPicture(response.data.user.picture);
-
-        // seed the jazzicon
-        // setPicture(Math.round(Math.random() * 10000000));
       }
     } catch (err) {
       console.log(err);

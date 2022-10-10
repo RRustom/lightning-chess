@@ -1,11 +1,4 @@
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  useMemo,
-} from 'react';
-import { parseGame } from '@mliebelt/pgn-parser';
+import { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import GameAPI from '../api/game';
 import UserAPI from '../api/user';
 import useGameWebSocket from '../hooks/useGameWebSocket';
@@ -18,8 +11,6 @@ export type GameContextType = {
   currentFEN: string | undefined;
   outcome: string | null;
   positions: string[];
-  moves: string[];
-  pgn: string;
   opponent: User;
   validMoves: Move[];
   isMyTurn: boolean;
@@ -34,8 +25,6 @@ const GameContextDefaults = {
   currentFEN: undefined,
   outcome: null,
   positions: [],
-  moves: [],
-  pgn: '',
   opponent: { id: 0, userName: '', picture: 0 },
   validMoves: [],
   isMyTurn: false,
@@ -51,12 +40,9 @@ export const GameProvider = ({ children }: any) => {
   const { userId, currentColor } = useAuth();
   const { uuid: gameUuid } = useParams();
 
-  // const [uuid, setUuid] = useState<string | null>(null);
   const [currentFEN, setCurrentFEN] = useState(undefined);
   const [outcome, setOutcome] = useState(null);
   const [positions, setPositions] = useState([]);
-  const [moves, setMoves] = useState([]);
-  const [pgn, setPgn] = useState('');
   const [opponent, setOpponent] = useState<User>({
     id: 0,
     userName: '',
@@ -78,20 +64,12 @@ export const GameProvider = ({ children }: any) => {
   // Initialize the game
   useEffect(() => {
     if (gameUuid)
-      __fetchGameData(
-        gameUuid,
-        setPositions,
-        setPgn,
-        currentColor,
-        setOpponent,
-        setMoves,
-      );
+      __fetchGameData(gameUuid, setPositions, currentColor, setOpponent);
   }, [gameUuid]);
 
   // Fetch opponent data
   useEffect(() => {
-    if (gameUuid && opponent.id)
-      __fetchOpponentData(gameUuid, opponent.id, setOpponent);
+    if (gameUuid && opponent.id) __fetchOpponentData(opponent.id, setOpponent);
   }, [gameUuid, opponent.id]);
 
   // Listen to updates to the board position
@@ -99,7 +77,6 @@ export const GameProvider = ({ children }: any) => {
     if (!socket) return;
     socket.onmessage = function (evt) {
       const data = JSON.parse(evt.data);
-      console.log('RECEIVED WS DATA: ', data);
 
       // if opponent joined
       if (currentColor !== Color.Black && data.blackId)
@@ -107,7 +84,6 @@ export const GameProvider = ({ children }: any) => {
 
       // if new position
       if (data.fen) {
-        console.log('UPDATED FEN: ', data.fen);
         setCurrentFEN(data.fen);
       }
 
@@ -131,9 +107,8 @@ export const GameProvider = ({ children }: any) => {
 
   // fetch valid moves when it's my turn
   useEffect(() => {
-    console.log('IS MY TURN: ', isMyTurn);
     if (gameUuid && isMyTurn) {
-      __fetchValidMoves(gameUuid, userId, setValidMoves);
+      __fetchValidMoves(gameUuid, setValidMoves);
     }
   }, [gameUuid, isMyTurn]);
 
@@ -182,8 +157,6 @@ export const GameProvider = ({ children }: any) => {
       currentFEN,
       outcome,
       positions,
-      moves,
-      pgn,
       opponent,
       validMoves,
       isMyTurn,
@@ -197,8 +170,6 @@ export const GameProvider = ({ children }: any) => {
       currentFEN,
       outcome,
       positions,
-      moves,
-      pgn,
       opponent,
       validMoves,
       isMyTurn,
@@ -220,13 +191,11 @@ const formatMove = (uci: string): Move => {
 
 const __fetchValidMoves = async (
   gameUuid: string,
-  playerId: number,
   setValidMoves: (x: any) => void,
 ) => {
   try {
     if (!gameUuid) return;
     const response = await GameAPI.getValidMoves(gameUuid);
-    console.log('VALID MOVES: ', response.data.moves);
     setValidMoves(response.data.moves.map((x: string) => formatMove(x)));
   } catch (err) {
     console.log(err);
@@ -236,17 +205,13 @@ const __fetchValidMoves = async (
 const __fetchGameData = async (
   gameUuid: string,
   setPositions: any,
-  setPgn: any,
   currentColor: Color,
   setOpponent: any,
-  setMoves: any,
 ) => {
   try {
     const response = await GameAPI.getGameByUuid(gameUuid);
-    console.log('FETCHED GAME: ', response.data);
     setPositions(response.data.positions);
-    // setPgn(response.data.pgn);
-    // setMoves(parseGame(response.data.pgn).moves);
+
     if (currentColor === Color.Black) {
       setOpponent((x: User) => ({ ...x, id: response.data.whiteId }));
     } else {
@@ -257,14 +222,9 @@ const __fetchGameData = async (
   }
 };
 
-const __fetchOpponentData = async (
-  gameUuid: string,
-  opponentId: number,
-  setOpponent: any,
-) => {
+const __fetchOpponentData = async (opponentId: number, setOpponent: any) => {
   try {
     const response = await UserAPI.getUserById(opponentId);
-    console.log('FETCHED OPPONENT: ', response);
     setOpponent({
       id: opponentId,
       userName: response.data.userName,
@@ -280,8 +240,8 @@ const __fetchWinningPayment = async (
   setReceivedPrize: any,
 ) => {
   try {
-    const response = await GameAPI.getWinningInvoice(gameUuid);
-    console.log('FETCHED WIN: ', response);
+    await GameAPI.getWinningInvoice(gameUuid);
+
     setReceivedPrize(true);
   } catch (err) {
     console.log(err);

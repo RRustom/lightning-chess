@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { useNavigate } from 'react-router-dom';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
@@ -17,7 +16,6 @@ type Props = {
 
 const ConnectForm = (props: Props) => {
   const { connectToNode, userName } = useAuth();
-  const navigate = useNavigate();
   const [host, setHost] = useState('');
   const [cert, setCert] = useState('');
   const [macaroon, setMacaroon] = useState('');

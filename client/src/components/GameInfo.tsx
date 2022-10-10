@@ -7,9 +7,7 @@ import Typography from '@mui/material/Typography';
 import usePayment from '../context/payment';
 import OutcomeModal from './OutcomeModal';
 
-type Props = {};
-
-const GameInfo = (props: Props) => {
+const GameInfo = () => {
   const { currentColor, userName, picture } = useAuth();
   const { opponent, isMyTurn, outcome } = useGame();
   const { canStartGame } = usePayment();
